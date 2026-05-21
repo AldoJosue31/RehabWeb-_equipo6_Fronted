@@ -263,11 +263,11 @@
   width: 100%;
 }
 
-.msg-row.terapeuta {
+.msg-row.mine {
   justify-content: flex-end;
 }
 
-.msg-row.paciente {
+.msg-row.theirs {
   justify-content: flex-start;
 }
 
@@ -319,8 +319,8 @@
   }
 }
 
-/* Estilos específicos si el mensaje es del Terapeuta */
-.msg-row.terapeuta .message-bubble {
+/* Mensajes enviados por el usuario logueado */
+.msg-row.mine .message-bubble {
   background-color: var(--color-primary);
   color: var(--color-surface);
   border-bottom-right-radius: 4px;
@@ -334,8 +334,8 @@
   }
 }
 
-/* Estilos específicos si el mensaje es del Paciente */
-.msg-row.paciente .message-bubble {
+/* Mensajes enviados por la otra persona */
+.msg-row.theirs .message-bubble {
   background-color: var(--color-surface);
   color: var(--color-main-text);
   border: 1px solid var(--color-light-border);

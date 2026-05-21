@@ -12,7 +12,7 @@ import { interval, Subscription, startWith } from 'rxjs';
 interface UIMessage {
   id: string;
   text: string;
-  sender: 'terapeuta' | 'paciente';
+  isMine: boolean;
   timestamp: Date;
   status: string;
   fileName?: string;
@@ -44,7 +44,7 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
-  private pollingSub?: Subscription;
+  private pollingSubs: Subscription[] = [];
 
   @ViewChild('chatContainer') chatContainer!: ElementRef;
 
@@ -110,11 +110,12 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
       const isJoinable = ultimoMsjVideo &&
                          ultimoMsjVideo.id === m.id &&
                          m.encrypted_text?.includes('Videollamada iniciada');
+      const isMine = m.sender === this.currentUserId;
 
       return {
         id: m.id.toString(),
         text: m.encrypted_text || '',
-        sender: m.sender === this.currentUserId ? this.currentUserRole : this.otherRole(),
+        isMine,
         timestamp: new Date(m.timestamp),
         status: m.status,
         fileName: m.file_attachment ? m.file_attachment.split('/').pop() : undefined,
@@ -169,20 +170,29 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.pollingSub) this.pollingSub.unsubscribe();
+    this.stopPolling();
   }
 
   private iniciarPolling() {
-    this.pollingSub = interval(4000)
+    this.stopPolling();
+
+    const mensajesSub = interval(1000)
       .pipe(startWith(0))
       .subscribe(() => {
         const convId = this.selectedConvId();
         if (convId) this.cargarMensajes(convId);
+      });
+
+    const conversacionesSub = interval(5000)
+      .pipe(startWith(0))
+      .subscribe(() => {
         this.mensajeriaService.getConversaciones().subscribe({
           next: data => this.conversations.set(data),
           error: err => this.handleAuthError(err)
         });
       });
+
+    this.pollingSubs = [mensajesSub, conversacionesSub];
   }
 
   cargarConversaciones() {
@@ -232,13 +242,15 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
 
   private marcarComoVistos(mensajes: BackendMessage[]) {
     const pendientes = mensajes.filter(m => m.sender !== this.currentUserId && m.status !== 'visto');
-    pendientes.forEach(msg => {
-      this.mensajeriaService.marcarComoVisto(msg.id).subscribe({
-        next: () => {
-          this.messages.update(state => state.map(m => m.id === msg.id ? { ...m, status: 'visto' } : m));
-        },
-        error: err => this.handleAuthError(err)
-      });
+    const conversationId = mensajes[0]?.conversation;
+    if (!conversationId || pendientes.length === 0) return;
+
+    this.mensajeriaService.marcarConversacionComoVista(conversationId).subscribe({
+      next: () => {
+        const ids = new Set(pendientes.map(m => m.id));
+        this.messages.update(state => state.map(m => ids.has(m.id) ? { ...m, status: 'visto' } : m));
+      },
+      error: err => this.handleAuthError(err)
     });
   }
 
@@ -249,17 +261,37 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
     if ((!text && !file) || !convId) return;
 
     this.isSending.set(true);
+    const tempId = -Date.now();
+    const optimisticMsg: BackendMessage = {
+      id: tempId,
+      conversation: convId,
+      sender: this.currentUserId,
+      encrypted_text: text,
+      file_attachment: null,
+      timestamp: new Date().toISOString(),
+      status: 'enviado',
+    };
+
+    this.messages.update(msgs => [...msgs, optimisticMsg]);
+    this.messageCtrl.setValue('');
+    this.selectedFile.set(null);
+    this.scrollToBottom();
 
     this.mensajeriaService.enviarMensaje(convId, text, file).subscribe({
       next: (newMsg) => {
-        this.messages.update(msgs => [...msgs, newMsg]);
-        this.messageCtrl.setValue('');
-        this.selectedFile.set(null);
+        this.messages.update(msgs => {
+          if (msgs.some(msg => msg.id === newMsg.id)) return msgs.filter(msg => msg.id !== tempId);
+          if (msgs.some(msg => msg.id === tempId)) {
+            return msgs.map(msg => msg.id === tempId ? newMsg : msg);
+          }
+          return [...msgs, newMsg];
+        });
         this.isSending.set(false);
         this.scrollToBottom();
         this.cargarConversaciones(); // Para actualizar el preview de la izquierda
       },
       error: (err) => {
+        this.messages.update(msgs => msgs.filter(msg => msg.id !== tempId));
         this.isSending.set(false);
         if (!this.handleAuthError(err)) this.showError('Error al enviar el mensaje.');
       }
@@ -285,10 +317,8 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   }
 
   private stopPolling() {
-    if (this.pollingSub) {
-      this.pollingSub.unsubscribe();
-      this.pollingSub = undefined;
-    }
+    this.pollingSubs.forEach(sub => sub.unsubscribe());
+    this.pollingSubs = [];
   }
 
   private handleAuthError(err: { status?: number }): boolean {
@@ -340,10 +370,6 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
     this.stopPolling();
     this.authService.logout();
     void this.router.navigateByUrl('/login');
-  }
-
-  private otherRole(): AuthRole {
-    return this.currentUserRole === 'terapeuta' ? 'paciente' : 'terapeuta';
   }
 
   onFileSelected(event: any) {

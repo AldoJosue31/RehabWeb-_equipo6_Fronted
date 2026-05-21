@@ -19,7 +19,10 @@ export class MensajeriaService {
   }
 
   getMensajes(conversationId: number): Observable<BackendMessage[]> {
-    return this.http.get<BackendMessage[]>(`${this.apiUrl}/mensajes/`, this.httpOptions);
+    return this.http.get<BackendMessage[]>(
+      `${this.apiUrl}/mensajes/?conversation=${conversationId}`,
+      this.httpOptions,
+    );
   }
 
   enviarMensaje(conversationId: number, text: string | null, file: File | null): Observable<BackendMessage> {
@@ -34,5 +37,13 @@ export class MensajeriaService {
 
   marcarComoVisto(mensajeId: number): Observable<any> {
     return this.http.patch(`${this.apiUrl}/mensajes/${mensajeId}/cambiar_estado/`, { status: 'visto' }, this.httpOptions);
+  }
+
+  marcarConversacionComoVista(conversationId: number): Observable<{ actualizados: number }> {
+    return this.http.patch<{ actualizados: number }>(
+      `${this.apiUrl}/mensajes/marcar_vistos/`,
+      { conversation_id: conversationId },
+      this.httpOptions,
+    );
   }
 }
