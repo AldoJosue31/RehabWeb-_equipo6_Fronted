@@ -1,51 +1,83 @@
-import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RoleAccount } from '../../services/account-admin.service';
+import { AuthService } from '../../services/auth.service';
+import { ClinicalDataService } from '../../services/clinical-data.service';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
+  imports: [CommonModule],
   template: `
     <section class="mx-auto grid max-w-4xl gap-5">
       <header>
         <h1 class="m-0 text-2xl font-bold leading-solid text-nav">Configuraciones</h1>
-        <p class="mt-1 text-sm leading-default text-secondary">Preferencias generales de la experiencia clínica.</p>
+        <p class="mt-1 text-sm leading-default text-secondary">Información real de la cuenta autenticada.</p>
       </header>
 
       <article class="grid gap-5 rounded-lg border border-line bg-surface p-5 shadow-sm">
-        <div class="grid gap-2">
-          <h2 class="m-0 text-lg font-bold leading-solid text-main">Perfil profesional</h2>
-          <p class="m-0 text-sm text-secondary">Esta vista es estática por ahora y replica la estructura visual del sistema.</p>
-        </div>
+        @if (loading()) {
+          <p class="m-0 text-sm text-secondary">Cargando cuenta real...</p>
+        } @else if (account(); as currentAccount) {
+          <div class="grid gap-2">
+            <h2 class="m-0 text-lg font-bold leading-solid text-main">{{ displayName(currentAccount) }}</h2>
+            <p class="m-0 text-sm text-secondary">{{ roleLabel() }}</p>
+          </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-          <label class="grid gap-2 text-sm font-bold text-main">
-            Nombre visible
-            <input class="rounded-md border border-line bg-surface px-4 py-3 text-base outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value="Dra. Elena Ramos" />
-          </label>
-          <label class="grid gap-2 text-sm font-bold text-main">
-            Especialidad
-            <input class="rounded-md border border-line bg-surface px-4 py-3 text-base outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" value="Fisioterapeuta" />
-          </label>
-          <label class="grid gap-2 text-sm font-bold text-main">
-            Idioma
-            <select class="rounded-md border border-line bg-surface px-4 py-3 text-base outline-none focus:border-focus focus:ring-2 focus:ring-focus/20">
-              <option>Español</option>
-              <option>English</option>
-            </select>
-          </label>
-          <label class="grid gap-2 text-sm font-bold text-main">
-            Zona horaria
-            <select class="rounded-md border border-line bg-surface px-4 py-3 text-base outline-none focus:border-focus focus:ring-2 focus:ring-focus/20">
-              <option>America/Mexico_City</option>
-            </select>
-          </label>
-        </div>
+          <dl class="grid gap-4 sm:grid-cols-2">
+            <div class="rounded-md bg-app p-4">
+              <dt class="text-xs font-bold uppercase tracking-wide text-muted">Usuario</dt>
+              <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount.username }}</dd>
+            </div>
+            <div class="rounded-md bg-app p-4">
+              <dt class="text-xs font-bold uppercase tracking-wide text-muted">Correo</dt>
+              <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount.email || 'Sin correo' }}</dd>
+            </div>
 
-        <div class="flex flex-wrap justify-end gap-3 border-t border-line pt-5">
-          <button class="rounded-md border border-line px-4 py-3 text-sm font-bold text-secondary transition duration-200 hover:border-primary hover:text-primary">Cancelar</button>
-          <button class="rounded-md bg-primary px-4 py-3 text-sm font-bold text-white transition duration-200 hover:bg-primary/90">Guardar cambios</button>
-        </div>
+            @if (role() === 'terapeuta') {
+              <div class="rounded-md bg-app p-4">
+                <dt class="text-xs font-bold uppercase tracking-wide text-muted">Especialidad</dt>
+                <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount.especialidad || 'Sin dato' }}</dd>
+              </div>
+              <div class="rounded-md bg-app p-4">
+                <dt class="text-xs font-bold uppercase tracking-wide text-muted">Licencia</dt>
+                <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount.numero_licencia || 'Sin dato' }}</dd>
+              </div>
+            } @else {
+              <div class="rounded-md bg-app p-4">
+                <dt class="text-xs font-bold uppercase tracking-wide text-muted">Diagnóstico</dt>
+                <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount.diagnostico_principal || 'Sin dato' }}</dd>
+              </div>
+              <div class="rounded-md bg-app p-4">
+                <dt class="text-xs font-bold uppercase tracking-wide text-muted">Nivel movilidad</dt>
+                <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount.nivel_movilidad || 'Sin dato' }}</dd>
+              </div>
+            }
+          </dl>
+        } @else {
+          <p class="rounded-md border border-line bg-app p-4 text-sm text-secondary">No se pudo cargar la información de la cuenta actual.</p>
+        }
       </article>
     </section>
   `,
 })
-export class SettingsComponent {}
+export class SettingsComponent implements OnInit {
+  private authService = inject(AuthService);
+  private clinicalDataService = inject(ClinicalDataService);
+
+  loading = signal(true);
+  account = signal<RoleAccount | null>(null);
+  role = computed(() => this.authService.getRole() ?? 'paciente');
+  roleLabel = computed(() => this.role() === 'terapeuta' ? 'Terapeuta' : 'Paciente');
+
+  ngOnInit(): void {
+    this.clinicalDataService.currentAccount().subscribe((account) => {
+      this.account.set(account);
+      this.loading.set(false);
+    });
+  }
+
+  displayName(account: RoleAccount): string {
+    return this.clinicalDataService.displayName(account);
+  }
+}

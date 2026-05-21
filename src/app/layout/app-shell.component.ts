@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RoleAccount } from '../services/account-admin.service';
 import { AuthService } from '../services/auth.service';
+import { ClinicalDataService } from '../services/clinical-data.service';
 
 type NavIcon = 'pulse' | 'users' | 'history' | 'chart' | 'bell' | 'report' | 'message' | 'settings';
 
@@ -9,6 +11,7 @@ interface NavItem {
   label: string;
   path: string;
   icon: NavIcon;
+  roles: Array<'terapeuta' | 'paciente'>;
 }
 
 @Component({
@@ -28,7 +31,7 @@ interface NavItem {
             </svg>
           </span>
           @if (!collapsed()) {
-            <strong class="text-base font-bold leading-solid text-nav">PhysioMetrics</strong>
+            <strong class="text-base font-bold leading-solid text-nav">RehabWeb</strong>
           }
         </div>
 
@@ -49,7 +52,7 @@ interface NavItem {
               <p class="mb-3 px-2 text-xs font-bold uppercase tracking-wide text-muted">Main menu</p>
             }
             <div class="grid gap-1">
-              @for (item of mainNav; track item.path) {
+              @for (item of mainNav(); track item.path) {
                 <a
                   class="group flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-secondary transition duration-200 hover:bg-primary-low hover:text-primary"
                   [routerLink]="item.path"
@@ -73,7 +76,7 @@ interface NavItem {
               <p class="mb-3 px-2 text-xs font-bold uppercase tracking-wide text-muted">Settings</p>
             }
             <div class="grid gap-1">
-              @for (item of settingsNav; track item.path) {
+              @for (item of settingsNav(); track item.path) {
                 <a
                   class="group flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-secondary transition duration-200 hover:bg-primary-low hover:text-primary"
                   [routerLink]="item.path"
@@ -109,7 +112,9 @@ interface NavItem {
 
         <div class="border-t border-line p-4">
           <div class="flex items-center gap-3">
-            <img class="h-10 w-10 rounded-full object-cover" src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=80&q=80" alt="" />
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-low text-sm font-bold text-primary">
+              {{ initials() }}
+            </span>
             @if (!collapsed()) {
               <div class="min-w-0">
                 <p class="m-0 truncate text-sm font-bold leading-solid text-main">{{ displayName() }}</p>
@@ -128,7 +133,7 @@ interface NavItem {
                 <path d="M4 12h3l2-5 4 10 2-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </span>
-            <strong class="text-base font-bold text-nav">PhysioMetrics</strong>
+            <strong class="text-base font-bold text-nav">RehabWeb</strong>
           </div>
           <button class="rounded-md border border-line px-3 py-2 text-sm font-bold text-secondary" type="button" (click)="toggleMobileMenu()">
             Menu
@@ -143,7 +148,7 @@ interface NavItem {
               <button class="rounded-md border border-line px-3 py-2 text-sm font-bold text-secondary" type="button" (click)="toggleMobileMenu()">Cerrar</button>
             </div>
             <div class="grid gap-1">
-              @for (item of allNav; track item.path) {
+              @for (item of allNav(); track item.path) {
                 <a
                   class="flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-secondary transition duration-200 hover:bg-primary-low hover:text-primary"
                   [routerLink]="item.path"
@@ -195,30 +200,51 @@ interface NavItem {
     </ng-template>
   `,
 })
-export class AppShellComponent {
+export class AppShellComponent implements OnInit {
   private authService = inject(AuthService);
+  private clinicalDataService = inject(ClinicalDataService);
   private router = inject(Router);
 
   collapsed = signal(false);
   mobileMenuOpen = signal(false);
+  currentAccount = signal<RoleAccount | null>(null);
 
-  mainNav: NavItem[] = [
-    { label: 'Tablero de Control', path: '/tablero-control', icon: 'pulse' },
-    { label: 'Pacientes', path: '/pacientes', icon: 'users' },
-    { label: 'Historial de Sesiones', path: '/historial-sesiones', icon: 'history' },
-    { label: 'Comparativa de Desempeño', path: '/comparativa-desempeno', icon: 'chart' },
-    { label: 'Alertas de Inactividad', path: '/alertas-inactividad', icon: 'bell' },
-    { label: 'Generación de Reportes', path: '/reportes', icon: 'report' },
-    { label: 'Mensajería', path: '/mensajeria', icon: 'message' },
+  private mainNavItems: NavItem[] = [
+    { label: 'Tablero de Control', path: '/tablero-control', icon: 'pulse', roles: ['terapeuta', 'paciente'] },
+    { label: 'Pacientes', path: '/pacientes', icon: 'users', roles: ['terapeuta'] },
+    { label: 'Historial de Sesiones', path: '/historial-sesiones', icon: 'history', roles: ['terapeuta'] },
+    { label: 'Comparativa de Desempeño', path: '/comparativa-desempeno', icon: 'chart', roles: ['terapeuta'] },
+    { label: 'Alertas de Inactividad', path: '/alertas-inactividad', icon: 'bell', roles: ['terapeuta'] },
+    { label: 'Generación de Reportes', path: '/reportes', icon: 'report', roles: ['terapeuta', 'paciente'] },
+    { label: 'Mensajería', path: '/mensajeria', icon: 'message', roles: ['terapeuta', 'paciente'] },
   ];
 
-  settingsNav: NavItem[] = [
-    { label: 'Configuraciones', path: '/configuraciones', icon: 'settings' },
+  private settingsNavItems: NavItem[] = [
+    { label: 'Configuraciones', path: '/configuraciones', icon: 'settings', roles: ['terapeuta', 'paciente'] },
   ];
 
-  allNav = [...this.mainNav, ...this.settingsNav];
-  displayName = computed(() => this.authService.getUsername() || 'Dra. Elena Ramos');
-  roleLabel = computed(() => this.authService.getRole() === 'paciente' ? 'Paciente' : 'Fisioterapeuta');
+  role = computed(() => this.authService.getRole() ?? 'paciente');
+  mainNav = computed(() => this.mainNavItems.filter((item) => item.roles.includes(this.role())));
+  settingsNav = computed(() => this.settingsNavItems.filter((item) => item.roles.includes(this.role())));
+  allNav = computed(() => [...this.mainNav(), ...this.settingsNav()]);
+  displayName = computed(() => this.clinicalDataService.displayName(this.currentAccount()));
+  initials = computed(() => {
+    const parts = this.displayName().trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return (parts[0]?.slice(0, 2) || 'US').toUpperCase();
+  });
+  roleLabel = computed(() => {
+    const account = this.currentAccount();
+    if (this.role() === 'paciente') {
+      return account?.diagnostico_principal || 'Paciente';
+    }
+
+    return account?.especialidad || 'Fisioterapeuta';
+  });
+
+  ngOnInit(): void {
+    this.clinicalDataService.currentAccount().subscribe((account) => this.currentAccount.set(account));
+  }
 
   toggleCollapsed(): void {
     this.collapsed.update((value) => !value);

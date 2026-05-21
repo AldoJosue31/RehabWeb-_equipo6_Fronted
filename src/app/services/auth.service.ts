@@ -56,6 +56,20 @@ export class AuthService {
     return this.getItem('username');
   }
 
+  getRoles(): AuthRole[] {
+    const rawRoles = this.getItem('roles');
+    if (!rawRoles) return [];
+
+    try {
+      const roles = JSON.parse(rawRoles) as unknown;
+      return Array.isArray(roles)
+        ? roles.filter((role): role is AuthRole => role === 'terapeuta' || role === 'paciente')
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
   getCurrentUserId(): number | null {
     const userId = this.getItem('user_id');
     const parsed = userId ? Number.parseInt(userId, 10) : Number.NaN;

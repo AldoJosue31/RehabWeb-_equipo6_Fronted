@@ -31,6 +31,10 @@ export class AccountAdminService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8000/api/accounts';
 
+  get(role: AccountAdminRole, accountId: number): Observable<RoleAccount> {
+    return this.http.get<RoleAccount>(`${this.apiUrl}/${role}/${accountId}/`);
+  }
+
   list(role: AccountAdminRole): Observable<RoleAccount[]> {
     return this.http.get<RoleAccount[]>(`${this.apiUrl}/${role}/`);
   }

@@ -1,5 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RoleAccount } from '../../services/account-admin.service';
+import { AuthService } from '../../services/auth.service';
+import { ClinicalDataService, DashboardData } from '../../services/clinical-data.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -9,107 +12,142 @@ import { Component } from '@angular/core';
     <section class="mx-auto grid max-w-6xl gap-5">
       <header class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 class="m-0 text-2xl font-bold leading-solid text-nav">Tablero de Control</h1>
-          <p class="mt-1 text-sm leading-default text-secondary">Resumen general de evolución clínica y alertas del día.</p>
+          <h1 class="m-0 text-2xl font-bold leading-solid text-nav">{{ role() === 'paciente' ? 'Mi tablero' : 'Tablero de Control' }}</h1>
+          <p class="mt-1 text-sm leading-default text-secondary">{{ subtitle() }}</p>
         </div>
-        <button class="flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition duration-200 hover:bg-primary/90">
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h4l2-6 4 12 2-6h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-          Nueva sesión
-        </button>
+        @if (role() === 'terapeuta') {
+          <a class="flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition duration-200 hover:bg-primary/90" href="/mensajeria">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            Abrir mensajería
+          </a>
+        }
       </header>
 
-      <article class="rounded-lg border border-warning bg-warning/10 p-4 shadow-sm">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <span class="grid h-10 w-10 place-items-center rounded-lg bg-warning/20 text-warning">
-              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 9 0 4M12 17h.01M10.3 4.2 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-            </span>
-            <div>
-              <h2 class="m-0 text-base font-bold leading-solid text-warning">Alerta de Inactividad de Pacientes</h2>
-              <p class="m-0 text-sm text-secondary">2 pacientes requieren atención inmediata por abandono del plan.</p>
-            </div>
-          </div>
-          <button class="rounded-full border border-warning bg-surface px-4 py-2 text-sm font-bold text-warning transition duration-200 hover:bg-warning hover:text-white">Ver todos (2)</button>
-        </div>
-
-        <div class="grid gap-3 md:grid-cols-2">
-          @for (alert of alerts; track alert.name) {
-            <div class="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-              <div class="flex min-w-0 items-center gap-3">
-                <img class="h-12 w-12 rounded-full object-cover" [src]="alert.avatar" alt="" />
-                <div class="min-w-0">
-                  <p class="m-0 truncate text-sm font-bold text-main">{{ alert.name }}</p>
-                  <p class="m-0 text-xs text-secondary">{{ alert.program }}</p>
-                </div>
-              </div>
-              <span class="rounded-full bg-danger px-2 py-1 text-xs font-bold text-white">{{ alert.days }}d</span>
-            </div>
+      @if (loading()) {
+        <div class="rounded-lg border border-line bg-surface p-6 text-sm text-secondary shadow-sm">Cargando información real del usuario...</div>
+      } @else if (errorMsg()) {
+        <div class="rounded-lg border border-danger bg-danger-bg p-4 text-sm font-bold text-danger">{{ errorMsg() }}</div>
+      } @else {
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          @for (metric of metrics(); track metric.label) {
+            <article class="rounded-lg border border-line bg-surface p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+              <p class="m-0 text-sm font-medium text-secondary">{{ metric.label }}</p>
+              <p class="mt-2 text-2xl font-bold leading-solid text-main">{{ metric.value }}</p>
+              <span class="mt-4 inline-flex rounded-full px-2 py-1 text-xs font-bold" [ngClass]="metric.className">{{ metric.caption }}</span>
+            </article>
           }
         </div>
-      </article>
 
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        @for (metric of metrics; track metric.label) {
-          <article class="rounded-lg border border-line bg-surface p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-            <div class="mb-4 flex items-center justify-between">
-              <span class="grid h-11 w-11 place-items-center rounded-lg" [ngClass]="metric.iconBg">
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path [attr.d]="metric.path" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              </span>
-              <span class="rounded-full px-2 py-1 text-xs font-bold" [ngClass]="metric.deltaClass">{{ metric.delta }}</span>
+        @if (role() === 'terapeuta') {
+          <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="m-0 text-lg font-bold leading-solid text-main">Pacientes visibles</h2>
+                <p class="m-0 text-sm text-secondary">Datos cargados desde cuentas y conversaciones reales.</p>
+              </div>
+              <span class="rounded-full bg-primary-low px-3 py-1 text-xs font-bold text-primary">{{ patients().length }} registros</span>
             </div>
-            <p class="m-0 text-sm font-medium text-secondary">{{ metric.label }}</p>
-            <p class="mt-2 text-2xl font-bold leading-solid text-main">{{ metric.value }}</p>
+
+            <div class="grid gap-3 md:grid-cols-2">
+              @for (patient of patients(); track patient.id) {
+                <div class="rounded-lg border border-line bg-app p-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 class="m-0 text-base font-bold leading-solid text-main">{{ displayName(patient) }}</h3>
+                      <p class="mt-1 text-sm text-secondary">{{ patient.diagnostico_principal || 'Sin diagnóstico registrado' }}</p>
+                    </div>
+                    <span class="rounded-md px-3 py-1 text-xs font-bold" [ngClass]="statusClass(patient)">{{ patient.estado || 'activo' }}</span>
+                  </div>
+                </div>
+              } @empty {
+                <p class="rounded-md border border-line bg-app p-4 text-sm text-secondary">No hay pacientes reales vinculados para mostrar.</p>
+              }
+            </div>
+          </article>
+        } @else {
+          <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
+            <h2 class="m-0 text-lg font-bold leading-solid text-main">Información clínica</h2>
+            @if (currentAccount()) {
+              <dl class="mt-5 grid gap-4 sm:grid-cols-2">
+                <div class="rounded-md bg-app p-4">
+                  <dt class="text-xs font-bold uppercase tracking-wide text-muted">Diagnóstico</dt>
+                  <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount()?.diagnostico_principal || 'Sin diagnóstico registrado' }}</dd>
+                </div>
+                <div class="rounded-md bg-app p-4">
+                  <dt class="text-xs font-bold uppercase tracking-wide text-muted">Nivel movilidad</dt>
+                  <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount()?.nivel_movilidad || 'Sin dato' }}</dd>
+                </div>
+                <div class="rounded-md bg-app p-4">
+                  <dt class="text-xs font-bold uppercase tracking-wide text-muted">Estrategia validación</dt>
+                  <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount()?.estrategia_validacion || 'Sin dato' }}</dd>
+                </div>
+                <div class="rounded-md bg-app p-4">
+                  <dt class="text-xs font-bold uppercase tracking-wide text-muted">Estrategia progreso</dt>
+                  <dd class="mt-2 text-sm font-bold text-main">{{ currentAccount()?.estrategia_progreso || 'Sin dato' }}</dd>
+                </div>
+              </dl>
+            } @else {
+              <p class="mt-4 rounded-md border border-line bg-app p-4 text-sm text-secondary">No se pudo cargar la cuenta actual.</p>
+            }
           </article>
         }
-      </div>
-
-      <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
-        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="m-0 text-lg font-bold leading-solid text-main">Evolución de Movilidad (Promedio Global)</h2>
-            <p class="mt-1 text-sm text-secondary">Progreso histórico del tratamiento en la clínica.</p>
-          </div>
-          <select class="rounded-md border border-line bg-surface px-4 py-2 text-sm font-medium text-secondary outline-none focus:border-focus focus:ring-2 focus:ring-focus/20">
-            <option>Último mes</option>
-            <option>Último trimestre</option>
-          </select>
-        </div>
-        <div class="h-[280px] overflow-hidden rounded-md bg-app p-4">
-          <svg class="h-full w-full" viewBox="0 0 900 260" preserveAspectRatio="none" aria-label="Grafica de movilidad">
-            <g class="text-line">
-              <path d="M30 40H870M30 95H870M30 150H870M30 205H870" stroke="currentColor" stroke-width="1" stroke-dasharray="4 8" />
-            </g>
-            <path d="M30 220 C120 198 160 198 220 205 S330 195 390 155 S520 140 580 148 S690 112 760 92 S840 72 870 66" fill="none" stroke="#00A781" stroke-width="5" stroke-linecap="round" />
-            <g fill="#00A781" stroke="#fff" stroke-width="4">
-              <circle cx="30" cy="220" r="6" /><circle cx="170" cy="202" r="6" /><circle cx="310" cy="206" r="6" /><circle cx="410" cy="158" r="6" /><circle cx="520" cy="145" r="6" /><circle cx="630" cy="150" r="6" /><circle cx="740" cy="104" r="6" /><circle cx="850" cy="70" r="6" />
-            </g>
-            <circle cx="630" cy="150" r="6" fill="#FF5C5C" stroke="#fff" stroke-width="4" />
-          </svg>
-        </div>
-      </article>
+      }
     </section>
   `,
 })
-export class DashboardComponent {
-  alerts = [
-    {
-      name: 'James Thornton',
-      program: 'Rehabilitación Rodilla',
-      days: 7,
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&q=80',
-    },
-    {
-      name: 'María Santos',
-      program: 'Lumbalgia Crónica',
-      days: 5,
-      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=96&q=80',
-    },
-  ];
+export class DashboardComponent implements OnInit {
+  private clinicalDataService = inject(ClinicalDataService);
+  private authService = inject(AuthService);
 
-  metrics = [
-    { label: 'Tasa de cumplimiento', value: '88%', delta: '+5%', deltaClass: 'bg-primary-low text-primary', iconBg: 'bg-primary-low text-primary', path: 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z' },
-    { label: 'Días activos', value: '14', delta: 'Este mes', deltaClass: 'bg-primary-low text-primary', iconBg: 'bg-info/10 text-info', path: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z' },
-    { label: 'Duración promedio', value: '35m', delta: '-2m', deltaClass: 'bg-danger-bg text-danger', iconBg: 'bg-warning/20 text-warning', path: 'M12 6v6l4 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
-    { label: 'Score de dolor', value: '3/10', delta: '-1 pt', deltaClass: 'bg-primary-low text-primary', iconBg: 'bg-primary-low text-primary', path: 'M4 12h4l2-6 4 12 2-6h4' },
-  ];
+  loading = signal(true);
+  errorMsg = signal('');
+  dashboardData = signal<DashboardData | null>(null);
+  role = computed(() => this.authService.getRole() ?? 'paciente');
+  patients = computed(() => this.dashboardData()?.patients ?? []);
+  currentAccount = computed(() => this.dashboardData()?.currentAccount ?? null);
+  subtitle = computed(() => this.role() === 'paciente'
+    ? 'Información real asociada a tu cuenta y plan clínico.'
+    : 'Resumen basado en pacientes y conversaciones reales vinculadas a tu usuario.');
+  metrics = computed(() => {
+    const patients = this.patients();
+    const conversations = this.dashboardData()?.conversations ?? [];
+    const inactive = patients.filter((patient) => patient.estado === 'inactivo').length;
+
+    if (this.role() === 'paciente') {
+      return [
+        { label: 'Conversaciones', value: conversations.length.toString(), caption: 'Mensajería real', className: 'bg-primary-low text-primary' },
+        { label: 'Estado', value: this.currentAccount()?.estado || 'Sin dato', caption: 'Perfil del paciente', className: this.statusClass(this.currentAccount()) },
+        { label: 'Movilidad', value: this.currentAccount()?.nivel_movilidad || 'Sin dato', caption: 'Perfil clínico', className: 'bg-info/10 text-info' },
+        { label: 'Terapeuta asignado', value: this.currentAccount()?.terapeuta_id ? 'Asignado' : 'Sin asignar', caption: 'Cuenta real', className: 'bg-line text-secondary' },
+      ];
+    }
+
+    return [
+      { label: 'Pacientes', value: patients.length.toString(), caption: 'Cuentas visibles', className: 'bg-primary-low text-primary' },
+      { label: 'Activos', value: patients.filter((patient) => patient.estado !== 'inactivo').length.toString(), caption: 'Estado activo', className: 'bg-primary-low text-primary' },
+      { label: 'Inactivos', value: inactive.toString(), caption: 'Requieren seguimiento', className: inactive ? 'bg-danger-bg text-danger' : 'bg-line text-secondary' },
+      { label: 'Conversaciones', value: conversations.length.toString(), caption: 'Chats reales', className: 'bg-info/10 text-info' },
+    ];
+  });
+
+  ngOnInit(): void {
+    this.clinicalDataService.dashboardData().subscribe({
+      next: (data) => {
+        this.dashboardData.set(data);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.errorMsg.set('No se pudo cargar la información real del usuario.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  displayName(account: RoleAccount | null): string {
+    return this.clinicalDataService.displayName(account);
+  }
+
+  statusClass(account: RoleAccount | null): string {
+    return account?.estado === 'inactivo' ? 'bg-danger-bg text-danger' : 'bg-primary-low text-primary';
+  }
 }
