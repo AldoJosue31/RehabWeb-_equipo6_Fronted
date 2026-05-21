@@ -9,6 +9,7 @@
 }
 
 .login-shell {
+  position: relative;
   min-height: 100dvh;
   display: grid;
   place-items: center;
@@ -18,6 +19,21 @@
     var(--bg);
   color: var(--ink);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.account-admin-button {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 11px 14px;
+  font-weight: 800;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
 }
 
 .login-panel {
@@ -136,6 +152,8 @@ h1 {
   padding: 14px;
   min-height: 112px;
   opacity: 0.74;
+  display: grid;
+  gap: 10px;
 }
 
 .role-sections article.active {
@@ -159,6 +177,19 @@ h1 {
   line-height: 1.45;
 }
 
+.role-sections button,
+.row-actions button,
+.form-actions button,
+.icon-button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--ink);
+  padding: 8px 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 form {
   display: grid;
   gap: 14px;
@@ -172,7 +203,9 @@ label {
   font-weight: 700;
 }
 
-input {
+input,
+select,
+textarea {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--line);
@@ -182,12 +215,16 @@ input {
   outline: none;
 }
 
-input:focus {
+input:focus,
+select:focus,
+textarea:focus {
   border-color: var(--therapist);
   box-shadow: 0 0 0 3px rgba(0, 138, 115, 0.14);
 }
 
-.patient-mode input:focus {
+.patient-mode input:focus,
+.patient-mode select:focus,
+.patient-mode textarea:focus {
   border-color: var(--patient);
   box-shadow: 0 0 0 3px rgba(79, 111, 219, 0.14);
 }
@@ -198,6 +235,16 @@ input:focus {
   padding: 10px 12px;
   background: #fff1f2;
   color: #be123c;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.success-message {
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  color: #15803d;
   font-weight: 700;
   font-size: 13px;
 }
@@ -221,12 +268,126 @@ input:focus {
   opacity: 0.68;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.accounts-modal {
+  width: min(1120px, 100%);
+  max-height: min(900px, 92dvh);
+  overflow: auto;
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 22px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+}
+
+.modal-header,
+.account-tabs,
+.form-actions,
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-header {
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.account-tabs {
+  margin-bottom: 16px;
+}
+
+.account-tabs button {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.account-tabs button.active {
+  border-color: var(--therapist);
+  color: var(--therapist);
+  background: rgba(0, 138, 115, 0.1);
+}
+
+.accounts-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(320px, 1.15fr);
+  gap: 18px;
+}
+
+.account-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.account-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.account-row span,
+.muted {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.danger {
+  color: #be123c;
+}
+
+.account-form {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.account-form h3 {
+  margin: 0 0 14px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  justify-content: flex-end;
+}
+
 @media (max-width: 560px) {
   .login-panel {
     padding: 22px;
   }
 
   .role-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .accounts-grid,
+  .form-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -1,4 +1,8 @@
 <main class="login-shell" [class.patient-mode]="role() === 'paciente'">
+  <button class="account-admin-button" type="button" (click)="openAccounts()">
+    Administrar cuentas
+  </button>
+
   <section class="login-panel">
     <div class="brand-block">
       <span class="brand-mark">R</span>
@@ -24,10 +28,12 @@
       <article [class.active]="role() === 'terapeuta'">
         <h2>Terapeuta</h2>
         <p>Gestiona conversaciones, consultas y seguimiento clinico.</p>
+        <button type="button" (click)="openAccounts('terapeutas', true)">Crear cuenta</button>
       </article>
       <article [class.active]="role() === 'paciente'">
         <h2>Paciente</h2>
         <p>Consulta tus mensajes y accede a sesiones con tu terapeuta.</p>
+        <button type="button" (click)="openAccounts('pacientes', true)">Crear cuenta</button>
       </article>
     </div>
 
@@ -51,4 +57,148 @@
       </button>
     </form>
   </section>
+
+  @if (accountModalOpen()) {
+    <div class="modal-backdrop">
+      <section class="accounts-modal" aria-modal="true" role="dialog">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Administracion</p>
+            <h2>Cuentas RehabWeb</h2>
+          </div>
+          <button class="icon-button" type="button" (click)="closeAccounts()" aria-label="Cerrar">x</button>
+        </header>
+
+        <div class="account-tabs" role="tablist">
+          <button type="button" [class.active]="accountRole() === 'terapeutas'" (click)="setAccountRole('terapeutas')">
+            Terapeutas actuales
+          </button>
+          <button type="button" [class.active]="accountRole() === 'pacientes'" (click)="setAccountRole('pacientes')">
+            Pacientes actuales
+          </button>
+        </div>
+
+        <div class="accounts-grid">
+          <section class="account-list">
+            @if (accountLoading()) {
+              <p class="muted">Cargando cuentas...</p>
+            } @else {
+              @for (account of accounts(); track account.id) {
+                <article class="account-row">
+                  <div>
+                    <strong>{{ account.nombre_completo || account.username }}</strong>
+                    <span>{{ account.username }} | {{ account.email || 'Sin correo' }}</span>
+                  </div>
+                  <div class="row-actions">
+                    <button type="button" (click)="editAccount(account)">Editar</button>
+                    <button class="danger" type="button" (click)="deleteAccount(account)">Borrar</button>
+                  </div>
+                </article>
+              } @empty {
+                <p class="muted">No hay cuentas registradas.</p>
+              }
+            }
+          </section>
+
+          <form class="account-form" [formGroup]="accountForm" (ngSubmit)="saveAccount()">
+            <h3>{{ editingAccountId() ? 'Editar cuenta' : 'Nueva cuenta' }}</h3>
+
+            <div class="form-grid">
+              <label>
+                Usuario
+                <input type="text" formControlName="username" autocomplete="off" />
+              </label>
+              <label>
+                Contrasena
+                <input type="password" formControlName="password" autocomplete="new-password" />
+              </label>
+              <label>
+                Nombre completo
+                <input type="text" formControlName="nombre_completo" />
+              </label>
+              <label>
+                Correo
+                <input type="email" formControlName="email" />
+              </label>
+
+              @if (accountRole() === 'terapeutas') {
+                <label>
+                  Especialidad
+                  <input type="text" formControlName="especialidad" />
+                </label>
+                <label>
+                  Numero de licencia
+                  <input type="text" formControlName="numero_licencia" />
+                </label>
+              } @else {
+                <label>
+                  Terapeuta asignado
+                  <select formControlName="terapeuta_id">
+                    <option value="">Sin asignar</option>
+                    @for (therapist of therapistOptions(); track therapist.id) {
+                      <option [value]="therapist.id">{{ therapist.nombre_completo || therapist.username }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  Fecha de nacimiento
+                  <input type="date" formControlName="fecha_nacimiento" />
+                </label>
+                <label>
+                  Estado
+                  <select formControlName="estado">
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                  </select>
+                </label>
+                <label>
+                  Nivel movilidad
+                  <select formControlName="nivel_movilidad">
+                    <option value="bajo">Bajo</option>
+                    <option value="medio">Medio</option>
+                    <option value="alto">Alto</option>
+                    <option value="dependiente">Dependiente</option>
+                  </select>
+                </label>
+                <label>
+                  Estrategia validacion
+                  <input type="text" formControlName="estrategia_validacion" />
+                </label>
+                <label>
+                  Estrategia progreso
+                  <input type="text" formControlName="estrategia_progreso" />
+                </label>
+                <label>
+                  Diagnostico principal
+                  <input type="text" formControlName="diagnostico_principal" />
+                </label>
+                <label>
+                  Restricciones
+                  <input type="text" formControlName="restricciones" />
+                </label>
+                <label class="wide">
+                  Historial medico
+                  <textarea formControlName="historial_medico" rows="3"></textarea>
+                </label>
+              }
+            </div>
+
+            @if (accountError()) {
+              <p class="error-message">{{ accountError() }}</p>
+            }
+            @if (accountSuccess()) {
+              <p class="success-message">{{ accountSuccess() }}</p>
+            }
+
+            <div class="form-actions">
+              <button type="button" (click)="resetAccountForm()">Limpiar</button>
+              <button class="submit-button" type="submit" [disabled]="accountLoading()">
+                {{ editingAccountId() ? 'Guardar cambios' : 'Crear cuenta' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  }
 </main>
