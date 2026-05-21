@@ -1,10 +1,11 @@
 import { Component, signal, ViewChild, ElementRef, ChangeDetectionStrategy, effect, computed, inject, OnInit, OnDestroy } from '@angular/core';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { MensajeriaService } from '../../services/mensajeria.service';
+import { AuthRole, AuthService } from '../../services/auth.service';
 import { BackendConversation, BackendMessage } from '../../models/mensajeria.models';
 import { interval, Subscription, startWith } from 'rxjs';
 
@@ -26,6 +27,7 @@ interface UIPatient {
   lastMessagePreview: string;
   initials: string;
   isOnline: boolean;
+  roleLabel: string;
 }
 
 @Component({
@@ -38,14 +40,17 @@ interface UIPatient {
 })
 export class MensajeriaComponent implements OnInit, OnDestroy {
   private mensajeriaService = inject(MensajeriaService);
-  private route = inject(ActivatedRoute);
+  private authService = inject(AuthService);
+  private router = inject(Router);
   private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
   private pollingSub?: Subscription;
 
   @ViewChild('chatContainer') chatContainer!: ElementRef;
 
-  currentUserId: number = 0; // Se setea en ngOnInit a partir de query param o token
+  currentUserId: number = 0;
+  currentUserRole: AuthRole = 'terapeuta';
+  currentUsername = '';
 
   messageCtrl = new FormControl('');
   selectedFile = signal<File | null>(null);
@@ -63,20 +68,28 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
     return this.conversations().map(conv => {
       const amIPaciente = conv.paciente === this.currentUserId;
       const interlocutorId = amIPaciente ? conv.terapeuta : conv.paciente;
+      const roleLabel = amIPaciente ? 'Terapeuta' : 'Paciente';
       return {
         id: conv.id.toString(),
-        name: amIPaciente ? `Terapeuta #${interlocutorId}` : `Paciente #${interlocutorId}`,
+        name: `${roleLabel} #${interlocutorId}`,
         initials: amIPaciente ? 'T' : 'P',
         lastMessageTime: conv.ultimo_mensaje ? this.formatTime(new Date(conv.ultimo_mensaje.timestamp)) : '',
         lastMessagePreview: conv.ultimo_mensaje?.encrypted_text || (conv.ultimo_mensaje?.file_attachment ? '📎 Archivo' : 'Sin mensajes'),
-        isOnline: true
+        isOnline: true,
+        roleLabel
       };
     });
   });
 
   selectedPatientId = computed(() => this.selectedConvId()?.toString() || '');
   activePatient = computed(() => this.patients().find(p => p.id === this.selectedPatientId()) || {
-    id: '', name: 'Seleccione un chat', initials: '?', isOnline: false
+    id: '',
+    name: 'Seleccione un chat',
+    lastMessageTime: '',
+    lastMessagePreview: '',
+    initials: '?',
+    isOnline: false,
+    roleLabel: 'Contacto'
   });
 
   activeMessages = computed<UIMessage[]>(() => {
@@ -100,7 +113,7 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
       return {
         id: m.id.toString(),
         text: m.encrypted_text || '',
-        sender: m.sender === this.currentUserId ? 'terapeuta' : 'paciente',
+        sender: m.sender === this.currentUserId ? this.currentUserRole : this.otherRole(),
         timestamp: new Date(m.timestamp),
         status: m.status,
         fileName: m.file_attachment ? m.file_attachment.split('/').pop() : undefined,
@@ -118,28 +131,34 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    const token = this.getAuthToken();
-    if (!token) {
+    const token = this.authService.getToken();
+    const savedId = this.authService.getCurrentUserId();
+    const savedRole = this.authService.getRole();
+    if (!token || !savedId || !savedRole) {
       this.showError('Inicia sesion para ver tus conversaciones.');
+      void this.router.navigateByUrl('/login');
       return;
     }
 
     // Buscamos si el ID viene por la URL (como en tus pruebas: ?user=3)
-    const userParam = this.route.snapshot.queryParamMap.get('user');
+    const userParam: string | null = null;
 
     // Buscamos si el ID ya está guardado de un login previo
-    const savedId = this.getStoredUserId();
+    const legacySavedId = savedId.toString();
 
     if (userParam) {
       this.currentUserId = parseInt(userParam);
       // Guardamos en memoria para que no se pierda al recargar la página
       this.setStoredUserId(userParam);
-    } else if (savedId) {
-      this.currentUserId = parseInt(savedId);
+    } else if (legacySavedId) {
+      this.currentUserId = parseInt(legacySavedId);
     } else {
       this.showError('No se encontro el usuario autenticado.');
       return;
     }
+
+    this.currentUserRole = savedRole;
+    this.currentUsername = this.authService.getUsername() ?? '';
 
     // Solo hacemos peticiones al backend si tenemos un ID válido
     if (this.currentUserId > 0) {
@@ -274,7 +293,9 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   private handleAuthError(err: { status?: number }): boolean {
     if (err.status === 401 || err.status === 403) {
       this.stopPolling();
+      this.authService.logout();
       this.showError('Sesion expirada o no iniciada.');
+      void this.router.navigateByUrl('/login');
       return true;
     }
 
@@ -292,6 +313,20 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
 
   formatTime(date: Date): string {
     return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  roleName(role: AuthRole): string {
+    return role === 'terapeuta' ? 'Terapeuta' : 'Paciente';
+  }
+
+  logout(): void {
+    this.stopPolling();
+    this.authService.logout();
+    void this.router.navigateByUrl('/login');
+  }
+
+  private otherRole(): AuthRole {
+    return this.currentUserRole === 'terapeuta' ? 'paciente' : 'terapeuta';
   }
 
   onFileSelected(event: any) {

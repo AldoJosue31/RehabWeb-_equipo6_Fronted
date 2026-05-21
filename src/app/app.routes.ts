@@ -1,18 +1,24 @@
 import { Routes } from '@angular/router';
 
 import { MensajeriaComponent } from './screens/mensajeria/mensajeria.component';
+import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'mensajeria' },
-  //{ path: '', pathMatch: 'full', redirectTo: 'landing' },
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./screens/login/login.component').then((m) => m.LoginComponent),
+  },
   {
     path: 'mensajeria',
-    component: MensajeriaComponent
+    component: MensajeriaComponent,
+    canActivate: [authGuard],
   },
   {
     path: 'landing',
     loadComponent: () =>
       import('./screens/landing/landing').then((m) => m.LandingComponent),
   },
-  { path: '**', redirectTo: 'landing' },
+  { path: '**', redirectTo: 'login' },
 ];

@@ -1,0 +1,54 @@
+<main class="login-shell" [class.patient-mode]="role() === 'paciente'">
+  <section class="login-panel">
+    <div class="brand-block">
+      <span class="brand-mark">R</span>
+      <div>
+        <p class="eyebrow">RehabWeb</p>
+        <h1>Acceso seguro</h1>
+      </div>
+    </div>
+
+    <div class="role-toggle" role="group" aria-label="Seleccionar rol">
+      <button type="button" [class.active]="role() === 'terapeuta'" (click)="setRole('terapeuta')">
+        Terapeuta
+      </button>
+      <button class="switch" type="button" (click)="toggleRole()" aria-label="Cambiar rol">
+        <span></span>
+      </button>
+      <button type="button" [class.active]="role() === 'paciente'" (click)="setRole('paciente')">
+        Paciente
+      </button>
+    </div>
+
+    <div class="role-sections">
+      <article [class.active]="role() === 'terapeuta'">
+        <h2>Terapeuta</h2>
+        <p>Gestiona conversaciones, consultas y seguimiento clinico.</p>
+      </article>
+      <article [class.active]="role() === 'paciente'">
+        <h2>Paciente</h2>
+        <p>Consulta tus mensajes y accede a sesiones con tu terapeuta.</p>
+      </article>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
+      <label>
+        Usuario
+        <input type="text" formControlName="username" autocomplete="username" />
+      </label>
+
+      <label>
+        Contrasena
+        <input type="password" formControlName="password" autocomplete="current-password" />
+      </label>
+
+      @if (errorMsg()) {
+        <p class="error-message">{{ errorMsg() }}</p>
+      }
+
+      <button class="submit-button" type="submit" [disabled]="loading()">
+        {{ loading() ? 'Entrando...' : 'Entrar como ' + (role() === 'terapeuta' ? 'terapeuta' : 'paciente') }}
+      </button>
+    </form>
+  </section>
+</main>

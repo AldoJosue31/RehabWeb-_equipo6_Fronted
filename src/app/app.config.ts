@@ -12,10 +12,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = typeof window !== 'undefined' && window.localStorage
     ? window.localStorage.getItem('token')
     : null;
+  const role = typeof window !== 'undefined' && window.localStorage
+    ? window.localStorage.getItem('role')
+    : null;
 
   if (isApiRequest && token) {
+    const headers: Record<string, string> = { Authorization: `Token ${token}` };
+    if (role) {
+      headers['X-Rehab-Role'] = role;
+    }
+
     req = req.clone({
-      setHeaders: { Authorization: `Token ${token}` }
+      setHeaders: headers
     });
   }
 
