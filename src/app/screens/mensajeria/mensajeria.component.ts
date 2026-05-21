@@ -6,7 +6,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { MensajeriaService } from '../../services/mensajeria.service';
 import { AuthRole, AuthService } from '../../services/auth.service';
-import { BackendConversation, BackendMessage } from '../../models/mensajeria.models';
+import { BackendContactInfo, BackendConversation, BackendMessage } from '../../models/mensajeria.models';
 import { interval, Subscription, startWith } from 'rxjs';
 
 interface UIMessage {
@@ -67,12 +67,13 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   patients = computed<UIPatient[]>(() => {
     return this.conversations().map(conv => {
       const amIPaciente = conv.paciente === this.currentUserId;
-      const interlocutorId = amIPaciente ? conv.terapeuta : conv.paciente;
+      const contact = amIPaciente ? conv.terapeuta_info : conv.paciente_info;
       const roleLabel = amIPaciente ? 'Terapeuta' : 'Paciente';
+      const contactName = this.contactDisplayName(contact, roleLabel);
       return {
         id: conv.id.toString(),
-        name: `${roleLabel} #${interlocutorId}`,
-        initials: amIPaciente ? 'T' : 'P',
+        name: contactName,
+        initials: this.contactInitials(contactName, roleLabel),
         lastMessageTime: conv.ultimo_mensaje ? this.formatTime(new Date(conv.ultimo_mensaje.timestamp)) : '',
         lastMessagePreview: conv.ultimo_mensaje?.encrypted_text || (conv.ultimo_mensaje?.file_attachment ? '📎 Archivo' : 'Sin mensajes'),
         isOnline: true,
@@ -317,6 +318,22 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
 
   roleName(role: AuthRole): string {
     return role === 'terapeuta' ? 'Terapeuta' : 'Paciente';
+  }
+
+  private contactDisplayName(contact: BackendContactInfo | undefined, fallbackRole: string): string {
+    if (!contact) return fallbackRole;
+
+    const name = contact.nombre_completo?.trim() || contact.username?.trim();
+    return name || fallbackRole;
+  }
+
+  private contactInitials(name: string, fallbackRole: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+
+    return (parts[0]?.slice(0, 2) || fallbackRole.slice(0, 1)).toUpperCase();
   }
 
   logout(): void {
