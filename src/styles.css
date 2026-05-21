@@ -18,23 +18,21 @@
   --baseline-focus: #00a781;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --baseline-primary: #33c9a0;
-    --baseline-primary-low: #0d3328;
-    --baseline-nav: #e2eaf4;
-    --baseline-app: #0f1923;
-    --baseline-surface: #1a2535;
-    --baseline-text: #e2eaf4;
-    --baseline-secondary: #94a3b8;
-    --baseline-muted: #607080;
-    --baseline-border: #2a3a4e;
-    --baseline-danger: #ff8080;
-    --baseline-danger-bg: #3d1010;
-    --baseline-warning: #ffd080;
-    --baseline-info: #80b6ff;
-    --baseline-focus: #33c9a0;
-  }
+.theme-dark {
+  --baseline-primary: #33c9a0;
+  --baseline-primary-low: #0d3328;
+  --baseline-nav: #e2eaf4;
+  --baseline-app: #0f1923;
+  --baseline-surface: #1a2535;
+  --baseline-text: #e2eaf4;
+  --baseline-secondary: #94a3b8;
+  --baseline-muted: #607080;
+  --baseline-border: #2a3a4e;
+  --baseline-danger: #ff8080;
+  --baseline-danger-bg: #3d1010;
+  --baseline-warning: #ffd080;
+  --baseline-info: #80b6ff;
+  --baseline-focus: #33c9a0;
 }
 
 @theme inline {

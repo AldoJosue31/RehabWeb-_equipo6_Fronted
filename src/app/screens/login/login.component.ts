@@ -55,7 +55,7 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
-      void this.router.navigateByUrl('/mensajeria');
+      void this.router.navigateByUrl('/tablero-control');
     }
   }
 
@@ -79,7 +79,7 @@ export class LoginComponent implements OnInit {
     this.errorMsg.set('');
 
     this.authService.login(username.trim(), password, this.role()).subscribe({
-      next: () => void this.router.navigateByUrl('/mensajeria'),
+      next: () => void this.router.navigateByUrl('/tablero-control'),
       error: (error: { status?: number; error?: { detail?: string } }) => {
         this.loading.set(false);
         if (error.status === 403) {
