@@ -4,30 +4,10 @@ import { Component } from '@angular/core';
   selector: 'app-landing',
   standalone: true,
   template: `
-    <main class="landing">
-      <h1>RehabWeb</h1>
-      <p>Frontend y backend en funcionamiento.</p>
+    <main class="grid min-h-dvh place-content-center gap-3 bg-app p-6 text-center font-sans text-main">
+      <h1 class="m-0 text-2xl font-bold leading-solid">RehabWeb</h1>
+      <p class="m-0 text-base leading-default text-secondary">Frontend y backend en funcionamiento.</p>
     </main>
   `,
-  styles: [
-    `
-      .landing {
-        min-height: 100dvh;
-        display: grid;
-        place-content: center;
-        text-align: center;
-        gap: 0.75rem;
-      }
-
-      h1 {
-        margin: 0;
-      }
-
-      p {
-        margin: 0;
-        color: #4b5563;
-      }
-    `,
-  ],
 })
 export class LandingComponent {}

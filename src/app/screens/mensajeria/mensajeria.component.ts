@@ -1,21 +1,22 @@
 import { Component, signal, ViewChild, ElementRef, ChangeDetectionStrategy, effect, computed, inject, OnInit, OnDestroy } from '@angular/core';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { HttpClient } from '@angular/common/http';
 import { MensajeriaService } from '../../services/mensajeria.service';
-import { BackendConversation, BackendMessage } from '../../models/mensajeria.models';
+import { AuthRole, AuthService } from '../../services/auth.service';
+import { BackendContactInfo, BackendConversation, BackendMessage } from '../../models/mensajeria.models';
 import { interval, Subscription, startWith } from 'rxjs';
 
 interface UIMessage {
   id: string;
   text: string;
-  sender: 'terapeuta' | 'paciente';
+  isMine: boolean;
   timestamp: Date;
   status: string;
   fileName?: string;
   fileUrl?: string;
+  isImage?: boolean;
   isJoinableCall?: boolean;
 }
 
@@ -26,6 +27,7 @@ interface UIPatient {
   lastMessagePreview: string;
   initials: string;
   isOnline: boolean;
+  roleLabel: string;
 }
 
 @Component({
@@ -38,19 +40,26 @@ interface UIPatient {
 })
 export class MensajeriaComponent implements OnInit, OnDestroy {
   private mensajeriaService = inject(MensajeriaService);
-  private route = inject(ActivatedRoute);
-  private http = inject(HttpClient);
+  private authService = inject(AuthService);
+  private router = inject(Router);
   private sanitizer = inject(DomSanitizer);
-  private pollingSub?: Subscription;
+  private pollingSubs: Subscription[] = [];
 
   @ViewChild('chatContainer') chatContainer!: ElementRef;
 
-  currentUserId: number = 0; // Se setea en ngOnInit a partir de query param o token
+  currentUserId: number = 0;
+  currentUserRole: AuthRole = 'terapeuta';
+  currentUsername = '';
 
   messageCtrl = new FormControl('');
   selectedFile = signal<File | null>(null);
   errorMsg = signal<string>('');
   isSending = signal<boolean>(false);
+  isLoadingConversations = signal<boolean>(true);
+  isLoadingMessages = signal<boolean>(false);
+  hasMoreMessages = signal<boolean>(false);
+  isLoadingOlder = signal<boolean>(false);
+  imagePreviewUrl = signal<string | null>(null);
 
   jitsiRoomUrl = signal<SafeResourceUrl | null>(null);
   activeVideoCallId = signal<number | null>(null);
@@ -62,21 +71,30 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   patients = computed<UIPatient[]>(() => {
     return this.conversations().map(conv => {
       const amIPaciente = conv.paciente === this.currentUserId;
-      const interlocutorId = amIPaciente ? conv.terapeuta : conv.paciente;
+      const contact = amIPaciente ? conv.terapeuta_info : conv.paciente_info;
+      const roleLabel = amIPaciente ? 'Terapeuta' : 'Paciente';
+      const contactName = this.contactDisplayName(contact, roleLabel);
       return {
         id: conv.id.toString(),
-        name: amIPaciente ? `Terapeuta #${interlocutorId}` : `Paciente #${interlocutorId}`,
-        initials: amIPaciente ? 'T' : 'P',
+        name: contactName,
+        initials: this.contactInitials(contactName, roleLabel),
         lastMessageTime: conv.ultimo_mensaje ? this.formatTime(new Date(conv.ultimo_mensaje.timestamp)) : '',
         lastMessagePreview: conv.ultimo_mensaje?.encrypted_text || (conv.ultimo_mensaje?.file_attachment ? '📎 Archivo' : 'Sin mensajes'),
-        isOnline: true
+        isOnline: true,
+        roleLabel
       };
     });
   });
 
   selectedPatientId = computed(() => this.selectedConvId()?.toString() || '');
   activePatient = computed(() => this.patients().find(p => p.id === this.selectedPatientId()) || {
-    id: '', name: 'Seleccione un chat', initials: '?', isOnline: false
+    id: '',
+    name: 'Seleccione un chat',
+    lastMessageTime: '',
+    lastMessagePreview: '',
+    initials: '?',
+    isOnline: false,
+    roleLabel: 'Contacto'
   });
 
   activeMessages = computed<UIMessage[]>(() => {
@@ -96,15 +114,17 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
       const isJoinable = ultimoMsjVideo &&
                          ultimoMsjVideo.id === m.id &&
                          m.encrypted_text?.includes('Videollamada iniciada');
+      const isMine = m.sender === this.currentUserId;
 
       return {
         id: m.id.toString(),
         text: m.encrypted_text || '',
-        sender: m.sender === this.currentUserId ? 'terapeuta' : 'paciente',
+        isMine,
         timestamp: new Date(m.timestamp),
         status: m.status,
         fileName: m.file_attachment ? m.file_attachment.split('/').pop() : undefined,
-        fileUrl: m.file_attachment || undefined,
+        fileUrl: m.file_attachment ? this.normalizeFileUrl(m.file_attachment) : undefined,
+        isImage: !!m.file_attachment && this.isImageUrl(m.file_attachment),
         isJoinableCall: !!isJoinable
       };
     });
@@ -118,28 +138,34 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    const token = this.getAuthToken();
-    if (!token) {
+    const token = this.authService.getToken();
+    const savedId = this.authService.getCurrentUserId();
+    const savedRole = this.authService.getRole();
+    if (!token || !savedId || !savedRole) {
       this.showError('Inicia sesion para ver tus conversaciones.');
+      void this.router.navigateByUrl('/login');
       return;
     }
 
     // Buscamos si el ID viene por la URL (como en tus pruebas: ?user=3)
-    const userParam = this.route.snapshot.queryParamMap.get('user');
+    const userParam: string | null = null;
 
     // Buscamos si el ID ya está guardado de un login previo
-    const savedId = this.getStoredUserId();
+    const legacySavedId = savedId.toString();
 
     if (userParam) {
       this.currentUserId = parseInt(userParam);
       // Guardamos en memoria para que no se pierda al recargar la página
       this.setStoredUserId(userParam);
-    } else if (savedId) {
-      this.currentUserId = parseInt(savedId);
+    } else if (legacySavedId) {
+      this.currentUserId = parseInt(legacySavedId);
     } else {
       this.showError('No se encontro el usuario autenticado.');
       return;
     }
+
+    this.currentUserRole = savedRole;
+    this.currentUsername = this.authService.getUsername() ?? '';
 
     // Solo hacemos peticiones al backend si tenemos un ID válido
     if (this.currentUserId > 0) {
@@ -149,31 +175,41 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.pollingSub) this.pollingSub.unsubscribe();
+    this.stopPolling();
   }
 
   private iniciarPolling() {
-    this.pollingSub = interval(4000)
+    this.stopPolling();
+
+    const mensajesSub = interval(1000)
       .pipe(startWith(0))
       .subscribe(() => {
         const convId = this.selectedConvId();
-        if (convId) this.cargarMensajes(convId);
-        this.mensajeriaService.getConversaciones().subscribe({
-          next: data => this.conversations.set(data),
-          error: err => this.handleAuthError(err)
-        });
+        if (convId) this.cargarMensajes(convId, undefined, false);
       });
+
+    const conversacionesSub = interval(5000)
+      .pipe(startWith(0))
+      .subscribe(() => this.cargarConversaciones(false));
+
+    this.pollingSubs = [mensajesSub, conversacionesSub];
   }
 
-  cargarConversaciones() {
+  cargarConversaciones(showLoading = true) {
+    if (showLoading && this.conversations().length === 0) this.isLoadingConversations.set(true);
+
     this.mensajeriaService.getConversaciones().subscribe({
       next: (data) => {
         this.conversations.set(data);
+        this.isLoadingConversations.set(false);
         if (data.length > 0 && !this.selectedConvId()) {
           this.selectPatient(data[0].id.toString());
         }
       },
-      error: (err) => this.handleAuthError(err)
+      error: (err) => {
+        this.isLoadingConversations.set(false);
+        this.handleAuthError(err);
+      }
     });
   }
 
@@ -184,15 +220,26 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
     this.jitsiRoomUrl.set(null);
   }
 
-   cargarMensajes(convId: number) {
-    this.mensajeriaService.getMensajes(convId).subscribe({
-      next: (data) => {
-        const filtered = data.filter(m => m.conversation === convId);
-        if (JSON.stringify(filtered) !== JSON.stringify(this.messages())) {
-          this.messages.set(filtered);
+   cargarMensajes(convId: number, before?: string, showLoading = true) {
+    if (before) this.isLoadingOlder.set(true);
+    if (!before && showLoading && !this.messages().some(message => message.conversation === convId)) {
+      this.isLoadingMessages.set(true);
+    }
+
+    this.mensajeriaService.getMensajes(convId, before).subscribe({
+      next: (page) => {
+        const filtered = page.messages.filter(m => m.conversation === convId);
+        this.hasMoreMessages.set(page.hasMore);
+
+        const nextMessages = before
+          ? [...filtered, ...this.messages()]
+          : this.mergeLatestMessages(filtered);
+
+        if (JSON.stringify(nextMessages) !== JSON.stringify(this.messages())) {
+          this.messages.set(nextMessages);
           this.marcarComoVistos(filtered);
 
-          const mensajesVideo = filtered.filter(m =>
+          const mensajesVideo = nextMessages.filter(m =>
             m.encrypted_text?.includes('Videollamada iniciada') ||
             m.encrypted_text === 'Videollamada finalizada'
           );
@@ -205,20 +252,46 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
               this.activeVideoCallId.set(null);
           }
         }
+        this.isLoadingMessages.set(false);
+        this.isLoadingOlder.set(false);
       },
-      error: (err) => this.handleAuthError(err)
+      error: (err) => {
+        this.isLoadingMessages.set(false);
+        this.isLoadingOlder.set(false);
+        this.handleAuthError(err);
+      }
     });
+  }
+
+  loadOlderMessages() {
+    const convId = this.selectedConvId();
+    const firstMessage = this.messages()[0];
+    if (!convId || !firstMessage || !this.hasMoreMessages() || this.isLoadingOlder()) return;
+    this.cargarMensajes(convId, firstMessage.timestamp);
+  }
+
+  onChatScroll() {
+    const el = this.chatContainer?.nativeElement;
+    if (el && el.scrollTop < 80) this.loadOlderMessages();
+  }
+
+  private mergeLatestMessages(latest: BackendMessage[]): BackendMessage[] {
+    const byId = new Map<number, BackendMessage>();
+    [...this.messages(), ...latest].forEach((message) => byId.set(message.id, message));
+    return Array.from(byId.values()).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   }
 
   private marcarComoVistos(mensajes: BackendMessage[]) {
     const pendientes = mensajes.filter(m => m.sender !== this.currentUserId && m.status !== 'visto');
-    pendientes.forEach(msg => {
-      this.mensajeriaService.marcarComoVisto(msg.id).subscribe({
-        next: () => {
-          this.messages.update(state => state.map(m => m.id === msg.id ? { ...m, status: 'visto' } : m));
-        },
-        error: err => this.handleAuthError(err)
-      });
+    const conversationId = mensajes[0]?.conversation;
+    if (!conversationId || pendientes.length === 0) return;
+
+    this.mensajeriaService.marcarConversacionComoVista(conversationId).subscribe({
+      next: () => {
+        const ids = new Set(pendientes.map(m => m.id));
+        this.messages.update(state => state.map(m => ids.has(m.id) ? { ...m, status: 'visto' } : m));
+      },
+      error: err => this.handleAuthError(err)
     });
   }
 
@@ -229,17 +302,37 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
     if ((!text && !file) || !convId) return;
 
     this.isSending.set(true);
+    const tempId = -Date.now();
+    const optimisticMsg: BackendMessage = {
+      id: tempId,
+      conversation: convId,
+      sender: this.currentUserId,
+      encrypted_text: text,
+      file_attachment: null,
+      timestamp: new Date().toISOString(),
+      status: 'enviado',
+    };
+
+    this.messages.update(msgs => [...msgs, optimisticMsg]);
+    this.messageCtrl.setValue('');
+    this.selectedFile.set(null);
+    this.scrollToBottom();
 
     this.mensajeriaService.enviarMensaje(convId, text, file).subscribe({
       next: (newMsg) => {
-        this.messages.update(msgs => [...msgs, newMsg]);
-        this.messageCtrl.setValue('');
-        this.selectedFile.set(null);
+        this.messages.update(msgs => {
+          if (msgs.some(msg => msg.id === newMsg.id)) return msgs.filter(msg => msg.id !== tempId);
+          if (msgs.some(msg => msg.id === tempId)) {
+            return msgs.map(msg => msg.id === tempId ? newMsg : msg);
+          }
+          return [...msgs, newMsg];
+        });
         this.isSending.set(false);
         this.scrollToBottom();
         this.cargarConversaciones(); // Para actualizar el preview de la izquierda
       },
       error: (err) => {
+        this.messages.update(msgs => msgs.filter(msg => msg.id !== tempId));
         this.isSending.set(false);
         if (!this.handleAuthError(err)) this.showError('Error al enviar el mensaje.');
       }
@@ -265,16 +358,16 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   }
 
   private stopPolling() {
-    if (this.pollingSub) {
-      this.pollingSub.unsubscribe();
-      this.pollingSub = undefined;
-    }
+    this.pollingSubs.forEach(sub => sub.unsubscribe());
+    this.pollingSubs = [];
   }
 
   private handleAuthError(err: { status?: number }): boolean {
     if (err.status === 401 || err.status === 403) {
       this.stopPolling();
+      this.authService.logout();
       this.showError('Sesion expirada o no iniciada.');
+      void this.router.navigateByUrl('/login');
       return true;
     }
 
@@ -294,9 +387,40 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
     return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
   }
 
+  roleName(role: AuthRole): string {
+    return role === 'terapeuta' ? 'Terapeuta' : 'Paciente';
+  }
+
+  private contactDisplayName(contact: BackendContactInfo | undefined, fallbackRole: string): string {
+    if (!contact) return fallbackRole;
+
+    const name = contact.nombre_completo?.trim() || contact.username?.trim();
+    return name || fallbackRole;
+  }
+
+  private contactInitials(name: string, fallbackRole: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+
+    return (parts[0]?.slice(0, 2) || fallbackRole.slice(0, 1)).toUpperCase();
+  }
+
+  logout(): void {
+    this.stopPolling();
+    this.authService.logout();
+    void this.router.navigateByUrl('/login');
+  }
+
   onFileSelected(event: any) {
     const file = event.target.files[0] as File;
-    if (file && file.size < 5 * 1024 * 1024) this.selectedFile.set(file);
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.showError('Solo puedes adjuntar imagenes.');
+      return;
+    }
+    if (file.size <= 5 * 1024 * 1024) this.selectedFile.set(file);
     else if (file) this.showError('El archivo excede los 5MB.');
   }
 
@@ -309,24 +433,10 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.http.post<any>('http://localhost:8000/api/mensajeria/videollamadas/iniciar_llamada/', {
-      conversation_id: convId
-    }, {
-      withCredentials: true
-    }).subscribe({
+    this.mensajeriaService.iniciarVideollamada(convId).subscribe({
       next: (res) => {
         this.activeVideoCallId.set(res.id);
-        const roomId = res.room_id;
-
-        //Botones seleccionados para vista
-        const botonesHabilitados = '["camera","microphone","desktop","fullscreen","settings"]';
-
-        //Saltar sala de pre-unión, silenciado inicial de micrófono y cámara, y deshabilitar deep linking para evitar que se abra la app móvil si el usuario accede desde un celular
-        const configuracionesExtras = 'config.disableDeepLinking=true&config.startWithAudioMuted=true&config.startWithVideoMuted=true&config.hideConferenceSubject=true';
-
-        const jitsiUrl = `https://meet.jit.si/RehabWeb-${roomId}#${configuracionesExtras}&config.toolbarButtons=${botonesHabilitados}`;
-
-        this.jitsiRoomUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(jitsiUrl));
+        this.openVideoRoom(res.room_id);
       },
       error: (err) => {
         console.error('Error al generar sala de video:', err);
@@ -335,6 +445,15 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  unirseVideollamada(messageText: string) {
+    const roomId = messageText.split('Sala:')[1]?.trim();
+    if (!roomId) {
+      this.showError('No se encontro la sala de la videollamada.');
+      return;
+    }
+    this.openVideoRoom(roomId);
   }
 
   terminarVideollamada() {
@@ -370,9 +489,7 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
 
     // Cierre en la base de datos
     if (callId) {
-      this.http.post(`http://localhost:8000/api/mensajeria/videollamadas/${callId}/finalizar_llamada/`, {}, {
-        withCredentials: true
-      }).subscribe({
+      this.mensajeriaService.finalizarVideollamada(callId).subscribe({
         next: () => {
           this.activeVideoCallId.set(null);
           console.log("Sala cerrada en el backend correctamente.");
@@ -382,5 +499,29 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  openImage(url: string) {
+    this.imagePreviewUrl.set(url);
+  }
+
+  closeImage() {
+    this.imagePreviewUrl.set(null);
+  }
+
+  private normalizeFileUrl(url: string): string {
+    if (url.startsWith('http')) return url;
+    return `http://localhost:8000${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+
+  private isImageUrl(url: string): boolean {
+    return /\.(png|jpe?g|gif|webp|bmp)$/i.test(url.split('?')[0]);
+  }
+
+  private openVideoRoom(roomId: string) {
+    const botonesHabilitados = '["camera","microphone","desktop","fullscreen","settings"]';
+    const configuracionesExtras = 'config.disableDeepLinking=true&config.startWithAudioMuted=true&config.startWithVideoMuted=true&config.hideConferenceSubject=true';
+    const jitsiUrl = `https://meet.jit.si/RehabWeb-${roomId}#${configuracionesExtras}&config.toolbarButtons=${botonesHabilitados}`;
+    this.jitsiRoomUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(jitsiUrl));
   }
 }

@@ -1,5 +1,5 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withViewTransitions } from '@angular/router';
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideHttpClient, withFetch, withInterceptors, withXsrfConfiguration, HttpInterceptorFn, HttpXsrfTokenExtractor} from '@angular/common/http';
@@ -12,10 +12,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = typeof window !== 'undefined' && window.localStorage
     ? window.localStorage.getItem('token')
     : null;
+  const role = typeof window !== 'undefined' && window.localStorage
+    ? window.localStorage.getItem('role')
+    : null;
 
   if (isApiRequest && token) {
+    const headers: Record<string, string> = { Authorization: `Token ${token}` };
+    if (role) {
+      headers['X-Rehab-Role'] = role;
+    }
+
     req = req.clone({
-      setHeaders: { Authorization: `Token ${token}` }
+      setHeaders: headers
     });
   }
 
@@ -38,7 +46,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
-    provideRouter(routes),
+    provideRouter(routes, withViewTransitions()),
     provideClientHydration(withEventReplay()),
     provideHttpClient(
       withFetch(),
