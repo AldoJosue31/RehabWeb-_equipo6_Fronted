@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RoleAccount } from '../../services/account-admin.service';
 import { AuthService } from '../../services/auth.service';
 import { ClinicalDataService, DashboardData } from '../../services/clinical-data.service';
+import { EngagementService, MotivationProfile, RehabAlert } from '../../services/engagement.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -115,36 +116,38 @@ import { ClinicalDataService, DashboardData } from '../../services/clinical-data
 export class DashboardComponent implements OnInit {
   private clinicalDataService = inject(ClinicalDataService);
   private authService = inject(AuthService);
+  private engagementService = inject(EngagementService);
 
   loading = signal(true);
   errorMsg = signal('');
   dashboardData = signal<DashboardData | null>(null);
+  alerts = signal<RehabAlert[]>([]);
+  motivation = signal<MotivationProfile | null>(null);
   role = computed(() => this.authService.getRole() ?? 'paciente');
   patients = computed(() => this.dashboardData()?.patients ?? []);
   currentAccount = computed(() => this.dashboardData()?.currentAccount ?? null);
-  inactiveCount = computed(() => this.patients().filter((patient) => patient.estado === 'inactivo').length);
+  inactiveCount = computed(() => this.alerts().filter((alert) => alert.status === 'activa' && alert.alert_type === 'INACTIVITY_WARNING').length);
+  criticalCount = computed(() => this.alerts().filter((alert) => alert.status === 'activa' && alert.severity === 'critical').length);
   subtitle = computed(() => this.role() === 'paciente'
     ? 'Información real asociada a tu cuenta y plan clínico.'
     : 'Resumen basado en pacientes y conversaciones reales vinculadas a tu usuario.');
   metrics = computed(() => {
     const patients = this.patients();
     const conversations = this.dashboardData()?.conversations ?? [];
-    const inactive = patients.filter((patient) => patient.estado === 'inactivo').length;
-
     if (this.role() === 'paciente') {
       return [
         { label: 'Conversaciones', value: conversations.length.toString(), caption: 'Mensajería real', className: 'bg-primary-low text-primary' },
-        { label: 'Estado', value: this.currentAccount()?.estado || 'Sin dato', caption: 'Perfil del paciente', className: this.statusClass(this.currentAccount()) },
-        { label: 'Movilidad', value: this.currentAccount()?.nivel_movilidad || 'Sin dato', caption: 'Perfil clínico', className: 'bg-info/10 text-info' },
-        { label: 'Terapeuta asignado', value: this.currentAccount()?.terapeuta_id ? 'Asignado' : 'Sin asignar', caption: 'Cuenta real', className: 'bg-line text-secondary' },
+        { label: 'Puntos', value: (this.motivation()?.total_points ?? this.currentAccount()?.total_points ?? 0).toString(), caption: 'Otorgamiento automático', className: 'bg-info/10 text-info' },
+        { label: 'Racha activa', value: (this.motivation()?.current_streak ?? this.currentAccount()?.current_streak ?? 0).toString(), caption: 'Días consecutivos', className: 'bg-primary-low text-primary' },
+        { label: 'Alertas activas', value: this.alerts().filter((alert) => alert.status === 'activa').length.toString(), caption: 'Seguimiento clínico', className: this.criticalCount() ? 'bg-danger-bg text-danger' : 'bg-line text-secondary' },
       ];
     }
 
     return [
       { label: 'Pacientes', value: patients.length.toString(), caption: 'Cuentas visibles', className: 'bg-primary-low text-primary' },
       { label: 'Activos', value: patients.filter((patient) => patient.estado !== 'inactivo').length.toString(), caption: 'Estado activo', className: 'bg-primary-low text-primary' },
-      { label: 'Inactivos', value: inactive.toString(), caption: 'Requieren seguimiento', className: inactive ? 'bg-danger-bg text-danger' : 'bg-line text-secondary' },
-      { label: 'Conversaciones', value: conversations.length.toString(), caption: 'Chats reales', className: 'bg-info/10 text-info' },
+      { label: 'Inactividad', value: this.inactiveCount().toString(), caption: 'Alertas activas', className: this.inactiveCount() ? 'bg-warning/10 text-warning' : 'bg-line text-secondary' },
+      { label: 'Críticas', value: this.criticalCount().toString(), caption: 'Dolor o deterioro', className: this.criticalCount() ? 'bg-danger-bg text-danger' : 'bg-info/10 text-info' },
     ];
   });
 
@@ -159,6 +162,18 @@ export class DashboardComponent implements OnInit {
         this.loading.set(false);
       },
     });
+
+    this.engagementService.getAlerts().subscribe({
+      next: (alerts) => this.alerts.set(alerts),
+      error: () => this.alerts.set([]),
+    });
+
+    if (this.role() === 'paciente') {
+      this.engagementService.getMotivation().subscribe({
+        next: (motivation) => this.motivation.set(motivation),
+        error: () => this.motivation.set(null),
+      });
+    }
   }
 
   displayName(account: RoleAccount | null): string {

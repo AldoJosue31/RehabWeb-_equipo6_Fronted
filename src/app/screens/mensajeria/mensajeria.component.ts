@@ -3,7 +3,6 @@ import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { HttpClient } from '@angular/common/http';
 import { MensajeriaService } from '../../services/mensajeria.service';
 import { AuthRole, AuthService } from '../../services/auth.service';
 import { BackendContactInfo, BackendConversation, BackendMessage } from '../../models/mensajeria.models';
@@ -17,6 +16,7 @@ interface UIMessage {
   status: string;
   fileName?: string;
   fileUrl?: string;
+  isImage?: boolean;
   isJoinableCall?: boolean;
 }
 
@@ -42,7 +42,6 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   private mensajeriaService = inject(MensajeriaService);
   private authService = inject(AuthService);
   private router = inject(Router);
-  private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
   private pollingSubs: Subscription[] = [];
 
@@ -56,6 +55,9 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   selectedFile = signal<File | null>(null);
   errorMsg = signal<string>('');
   isSending = signal<boolean>(false);
+  hasMoreMessages = signal<boolean>(false);
+  isLoadingOlder = signal<boolean>(false);
+  imagePreviewUrl = signal<string | null>(null);
 
   jitsiRoomUrl = signal<SafeResourceUrl | null>(null);
   activeVideoCallId = signal<number | null>(null);
@@ -119,7 +121,8 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
         timestamp: new Date(m.timestamp),
         status: m.status,
         fileName: m.file_attachment ? m.file_attachment.split('/').pop() : undefined,
-        fileUrl: m.file_attachment || undefined,
+        fileUrl: m.file_attachment ? this.normalizeFileUrl(m.file_attachment) : undefined,
+        isImage: !!m.file_attachment && this.isImageUrl(m.file_attachment),
         isJoinableCall: !!isJoinable
       };
     });
@@ -214,15 +217,23 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
     this.jitsiRoomUrl.set(null);
   }
 
-   cargarMensajes(convId: number) {
-    this.mensajeriaService.getMensajes(convId).subscribe({
-      next: (data) => {
-        const filtered = data.filter(m => m.conversation === convId);
-        if (JSON.stringify(filtered) !== JSON.stringify(this.messages())) {
-          this.messages.set(filtered);
+   cargarMensajes(convId: number, before?: string) {
+    if (before) this.isLoadingOlder.set(true);
+
+    this.mensajeriaService.getMensajes(convId, before).subscribe({
+      next: (page) => {
+        const filtered = page.messages.filter(m => m.conversation === convId);
+        this.hasMoreMessages.set(page.hasMore);
+
+        const nextMessages = before
+          ? [...filtered, ...this.messages()]
+          : this.mergeLatestMessages(filtered);
+
+        if (JSON.stringify(nextMessages) !== JSON.stringify(this.messages())) {
+          this.messages.set(nextMessages);
           this.marcarComoVistos(filtered);
 
-          const mensajesVideo = filtered.filter(m =>
+          const mensajesVideo = nextMessages.filter(m =>
             m.encrypted_text?.includes('Videollamada iniciada') ||
             m.encrypted_text === 'Videollamada finalizada'
           );
@@ -235,9 +246,31 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
               this.activeVideoCallId.set(null);
           }
         }
+        this.isLoadingOlder.set(false);
       },
-      error: (err) => this.handleAuthError(err)
+      error: (err) => {
+        this.isLoadingOlder.set(false);
+        this.handleAuthError(err);
+      }
     });
+  }
+
+  loadOlderMessages() {
+    const convId = this.selectedConvId();
+    const firstMessage = this.messages()[0];
+    if (!convId || !firstMessage || !this.hasMoreMessages() || this.isLoadingOlder()) return;
+    this.cargarMensajes(convId, firstMessage.timestamp);
+  }
+
+  onChatScroll() {
+    const el = this.chatContainer?.nativeElement;
+    if (el && el.scrollTop < 80) this.loadOlderMessages();
+  }
+
+  private mergeLatestMessages(latest: BackendMessage[]): BackendMessage[] {
+    const byId = new Map<number, BackendMessage>();
+    [...this.messages(), ...latest].forEach((message) => byId.set(message.id, message));
+    return Array.from(byId.values()).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   }
 
   private marcarComoVistos(mensajes: BackendMessage[]) {
@@ -374,7 +407,12 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
 
   onFileSelected(event: any) {
     const file = event.target.files[0] as File;
-    if (file && file.size < 5 * 1024 * 1024) this.selectedFile.set(file);
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      this.showError('Solo puedes adjuntar imagenes.');
+      return;
+    }
+    if (file.size <= 5 * 1024 * 1024) this.selectedFile.set(file);
     else if (file) this.showError('El archivo excede los 5MB.');
   }
 
@@ -387,24 +425,10 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.http.post<any>('http://localhost:8000/api/mensajeria/videollamadas/iniciar_llamada/', {
-      conversation_id: convId
-    }, {
-      withCredentials: true
-    }).subscribe({
+    this.mensajeriaService.iniciarVideollamada(convId).subscribe({
       next: (res) => {
         this.activeVideoCallId.set(res.id);
-        const roomId = res.room_id;
-
-        //Botones seleccionados para vista
-        const botonesHabilitados = '["camera","microphone","desktop","fullscreen","settings"]';
-
-        //Saltar sala de pre-unión, silenciado inicial de micrófono y cámara, y deshabilitar deep linking para evitar que se abra la app móvil si el usuario accede desde un celular
-        const configuracionesExtras = 'config.disableDeepLinking=true&config.startWithAudioMuted=true&config.startWithVideoMuted=true&config.hideConferenceSubject=true';
-
-        const jitsiUrl = `https://meet.jit.si/RehabWeb-${roomId}#${configuracionesExtras}&config.toolbarButtons=${botonesHabilitados}`;
-
-        this.jitsiRoomUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(jitsiUrl));
+        this.openVideoRoom(res.room_id);
       },
       error: (err) => {
         console.error('Error al generar sala de video:', err);
@@ -413,6 +437,15 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  unirseVideollamada(messageText: string) {
+    const roomId = messageText.split('Sala:')[1]?.trim();
+    if (!roomId) {
+      this.showError('No se encontro la sala de la videollamada.');
+      return;
+    }
+    this.openVideoRoom(roomId);
   }
 
   terminarVideollamada() {
@@ -448,9 +481,7 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
 
     // Cierre en la base de datos
     if (callId) {
-      this.http.post(`http://localhost:8000/api/mensajeria/videollamadas/${callId}/finalizar_llamada/`, {}, {
-        withCredentials: true
-      }).subscribe({
+      this.mensajeriaService.finalizarVideollamada(callId).subscribe({
         next: () => {
           this.activeVideoCallId.set(null);
           console.log("Sala cerrada en el backend correctamente.");
@@ -460,5 +491,29 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  openImage(url: string) {
+    this.imagePreviewUrl.set(url);
+  }
+
+  closeImage() {
+    this.imagePreviewUrl.set(null);
+  }
+
+  private normalizeFileUrl(url: string): string {
+    if (url.startsWith('http')) return url;
+    return `http://localhost:8000${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+
+  private isImageUrl(url: string): boolean {
+    return /\.(png|jpe?g|gif|webp|bmp)$/i.test(url.split('?')[0]);
+  }
+
+  private openVideoRoom(roomId: string) {
+    const botonesHabilitados = '["camera","microphone","desktop","fullscreen","settings"]';
+    const configuracionesExtras = 'config.disableDeepLinking=true&config.startWithAudioMuted=true&config.startWithVideoMuted=true&config.hideConferenceSubject=true';
+    const jitsiUrl = `https://meet.jit.si/RehabWeb-${roomId}#${configuracionesExtras}&config.toolbarButtons=${botonesHabilitados}`;
+    this.jitsiRoomUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(jitsiUrl));
   }
 }

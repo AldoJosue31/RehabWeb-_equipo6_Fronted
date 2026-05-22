@@ -212,7 +212,7 @@ export class AppShellComponent implements OnInit {
   private mainNavItems: NavItem[] = [
     { label: 'Tablero de Control', path: '/tablero-control', icon: 'pulse', roles: ['terapeuta', 'paciente'] },
     { label: 'Pacientes', path: '/pacientes', icon: 'users', roles: ['terapeuta'] },
-    { label: 'Historial de Sesiones', path: '/historial-sesiones', icon: 'history', roles: ['terapeuta'] },
+    { label: 'Sesiones y Progreso', path: '/historial-sesiones', icon: 'history', roles: ['terapeuta', 'paciente'] },
     { label: 'Comparativa de Desempeño', path: '/comparativa-desempeno', icon: 'chart', roles: ['terapeuta'] },
     { label: 'Alertas de Inactividad', path: '/alertas-inactividad', icon: 'bell', roles: ['terapeuta'] },
     { label: 'Generación de Reportes', path: '/reportes', icon: 'report', roles: ['terapeuta', 'paciente'] },

@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RoleAccount } from '../../services/account-admin.service';
 import { AuthService } from '../../services/auth.service';
 import { ClinicalDataService } from '../../services/clinical-data.service';
+import { EngagementService, MotivationProfile } from '../../services/engagement.service';
 
 @Component({
   selector: 'app-settings',
@@ -56,6 +57,23 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
               </div>
             }
           </dl>
+
+          @if (role() === 'paciente' && motivation(); as stats) {
+            <div class="rounded-md border border-line bg-app p-4">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 class="m-0 text-base font-bold text-main">Ranking opcional</h3>
+                  <p class="m-0 mt-1 text-sm text-secondary">
+                    {{ stats.leaderboard_enabled ? 'Participa solo con consentimiento explicito; se muestra Top 10 sin posicion exacta.' : 'No disponible para menores.' }}
+                  </p>
+                </div>
+                <label class="inline-flex items-center gap-3 text-sm font-bold text-main" [ngClass]="stats.leaderboard_enabled ? '' : 'opacity-50'">
+                  <input type="checkbox" [checked]="stats.leaderboard_opt_in" [disabled]="!stats.leaderboard_enabled" (change)="toggleRanking($any($event.target).checked)" />
+                  Participar
+                </label>
+              </div>
+            </div>
+          }
         } @else {
           <p class="rounded-md border border-line bg-app p-4 text-sm text-secondary">No se pudo cargar la información de la cuenta actual.</p>
         }
@@ -66,9 +84,11 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
 export class SettingsComponent implements OnInit {
   private authService = inject(AuthService);
   private clinicalDataService = inject(ClinicalDataService);
+  private engagementService = inject(EngagementService);
 
   loading = signal(true);
   account = signal<RoleAccount | null>(null);
+  motivation = signal<MotivationProfile | null>(null);
   role = computed(() => this.authService.getRole() ?? 'paciente');
   roleLabel = computed(() => this.role() === 'terapeuta' ? 'Terapeuta' : 'Paciente');
 
@@ -77,9 +97,16 @@ export class SettingsComponent implements OnInit {
       this.account.set(account);
       this.loading.set(false);
     });
+    if (this.role() === 'paciente') {
+      this.engagementService.getMotivation().subscribe((motivation) => this.motivation.set(motivation));
+    }
   }
 
   displayName(account: RoleAccount): string {
     return this.clinicalDataService.displayName(account);
+  }
+
+  toggleRanking(leaderboard_opt_in: boolean): void {
+    this.engagementService.updateMotivation({ leaderboard_opt_in }).subscribe((motivation) => this.motivation.set(motivation));
   }
 }

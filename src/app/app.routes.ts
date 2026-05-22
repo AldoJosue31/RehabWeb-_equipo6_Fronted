@@ -34,7 +34,7 @@ export const routes: Routes = [
       {
         path: 'historial-sesiones',
         canActivate: [roleGuard],
-        data: { roles: ['terapeuta'] },
+        data: { roles: ['terapeuta', 'paciente'] },
         loadComponent: () =>
           import('./screens/sessions/sessions.component').then((m) => m.SessionsComponent),
       },

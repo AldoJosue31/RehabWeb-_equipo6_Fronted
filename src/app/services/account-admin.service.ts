@@ -22,6 +22,11 @@ export interface RoleAccount {
   historial_medico?: string;
   nivel_movilidad?: 'bajo' | 'medio' | 'alto' | 'dependiente';
   restricciones?: string;
+  total_points?: number;
+  current_streak?: number;
+  best_streak?: number;
+  leaderboard_opt_in?: boolean;
+  leaderboard_enabled?: boolean;
 }
 
 @Injectable({

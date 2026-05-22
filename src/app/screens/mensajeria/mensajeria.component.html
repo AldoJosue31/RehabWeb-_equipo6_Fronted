@@ -83,7 +83,7 @@
         </div>
       </div>
     } @else {
-      <div class="flex grow flex-col gap-5 overflow-y-auto bg-app p-5" #chatContainer>
+      <div class="flex grow flex-col gap-5 overflow-y-auto bg-app p-5" #chatContainer (scroll)="onChatScroll()">
         <div class="mb-4 flex justify-center">
           <span class="flex items-center gap-2 rounded-full bg-line px-4 py-2 text-xs font-medium text-secondary">
             <svg class="h-3.5 w-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -92,6 +92,14 @@
             Mensajes cifrados de extremo a extremo
           </span>
         </div>
+
+        @if(hasMoreMessages()) {
+          <div class="flex justify-center">
+            <button class="rounded-md border border-line bg-surface px-4 py-2 text-xs font-bold text-secondary shadow-sm" type="button" (click)="loadOlderMessages()" [disabled]="isLoadingOlder()">
+              {{ isLoadingOlder() ? 'Cargando...' : 'Cargar mensajes anteriores' }}
+            </button>
+          </div>
+        }
 
         @for (msg of activeMessages(); track msg.id) {
           <div class="flex w-full" [ngClass]="msg.isMine ? 'justify-end' : 'justify-start'">
@@ -104,19 +112,22 @@
               "
             >
               @if(msg.fileName) {
-                <a
-                  [href]="msg.fileUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
                   class="mb-3 flex items-center gap-2 rounded-md border p-2 text-xs font-medium text-inherit no-underline transition duration-200 hover:opacity-85"
                   [ngClass]="msg.isMine ? 'border-white/20 bg-white/15' : 'border-line bg-app'"
-                  title="Abrir o descargar"
+                  title="Ampliar imagen"
+                  (click)="msg.fileUrl && openImage(msg.fileUrl)"
                 >
-                  <svg class="h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z"/>
-                  </svg>
+                  @if(msg.isImage && msg.fileUrl) {
+                    <img class="h-16 w-16 rounded-md object-cover" [src]="msg.fileUrl" [alt]="msg.fileName" />
+                  } @else {
+                    <svg class="h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z"/>
+                    </svg>
+                  }
                   <span class="truncate">{{msg.fileName}}</span>
-                </a>
+                </button>
               }
 
               @if(msg.text.includes('Videollamada iniciada')) {
@@ -131,7 +142,7 @@
                   @if(msg.isJoinableCall) {
                     <button
                       class="w-full rounded-md bg-primary px-4 py-2 text-sm font-bold text-white transition duration-200 hover:bg-primary/90"
-                      (click)="iniciarVideollamada()"
+                      (click)="unirseVideollamada(msg.text)"
                     >
                       Unirse a la reunión
                     </button>
@@ -197,7 +208,7 @@
           </div>
         }
 
-        <input class="hidden" type="file" #fileInput (change)="onFileSelected($event)" accept="image/png, image/jpeg, .pdf, .doc, .docx">
+        <input class="hidden" type="file" #fileInput (change)="onFileSelected($event)" accept="image/png, image/jpeg, image/webp">
 
         <button
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-secondary transition duration-200 hover:bg-app hover:text-primary"
@@ -233,4 +244,11 @@
     }
   </main>
 </div>
+
+@if(imagePreviewUrl()) {
+  <div class="fixed inset-0 z-50 grid place-items-center bg-nav/80 p-6" (click)="closeImage()">
+    <button class="absolute right-5 top-5 rounded-md bg-surface px-4 py-2 text-sm font-bold text-main" type="button" (click)="closeImage()">Cerrar</button>
+    <img class="max-h-[88dvh] max-w-[92vw] rounded-lg bg-surface object-contain shadow-lg" [src]="imagePreviewUrl()!" alt="Evidencia ampliada" />
+  </div>
+}
 </section>

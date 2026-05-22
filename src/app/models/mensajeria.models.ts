@@ -32,3 +32,16 @@ export interface BackendConversation {
   updated_at: string;
   ultimo_mensaje: BackendMessage | null;
 }
+
+export interface BackendVideoCall {
+  id: number;
+  room_id: string;
+  conversation: number;
+  initiator: number | null;
+  created_at: string;
+  started_at: string;
+  ended_at: string | null;
+  status: 'programada' | 'activa' | 'finalizada' | 'cancelada';
+  duration_minutes: number;
+  join_url: string;
+}

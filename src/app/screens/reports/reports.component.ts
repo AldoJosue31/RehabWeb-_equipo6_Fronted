@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RoleAccount } from '../../services/account-admin.service';
 import { AuthService } from '../../services/auth.service';
 import { ClinicalDataService } from '../../services/clinical-data.service';
+import { EngagementService, LeaderboardEntry, WeeklySummary } from '../../services/engagement.service';
 
 @Component({
   selector: 'app-reports',
@@ -29,6 +30,44 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
               <h2 class="m-0 text-lg font-bold leading-solid text-main">Exportación de Datos Clínicos</h2>
               <p class="m-0 text-sm text-secondary">{{ role() === 'paciente' ? 'Tu cuenta será usada como fuente del reporte.' : 'Selecciona un paciente real de tu directorio.' }}</p>
             </div>
+          </div>
+
+          <div class="mb-6 grid gap-4 md:grid-cols-2">
+            <section class="rounded-md border border-line bg-app p-4">
+              <h3 class="m-0 text-base font-bold text-main">Resumen semanal motivacional</h3>
+              @if (weeklySummary(); as summary) {
+                <dl class="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wide text-muted">Completadas</dt>
+                    <dd class="mt-1 text-xl font-bold text-primary">{{ summary.sessions_completed }}/{{ summary.sessions_scheduled }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wide text-muted">Puntos</dt>
+                    <dd class="mt-1 text-xl font-bold text-info">{{ summary.points_obtained }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-xs font-bold uppercase tracking-wide text-muted">Semana</dt>
+                    <dd class="mt-1 text-sm font-bold text-main">{{ summary.week_start }} - {{ summary.week_end }}</dd>
+                  </div>
+                </dl>
+              } @else {
+                <p class="m-0 mt-3 text-sm text-secondary">No hay resumen semanal disponible.</p>
+              }
+            </section>
+
+            <section class="rounded-md border border-line bg-app p-4">
+              <h3 class="m-0 text-base font-bold text-main">Ranking opcional Top 10</h3>
+              <div class="mt-4 grid gap-2">
+                @for (entry of leaderboard(); track entry.nombre) {
+                  <div class="flex items-center justify-between rounded-md bg-surface px-3 py-2 text-sm">
+                    <span class="font-bold text-main">{{ entry.nombre }}</span>
+                    <span class="text-secondary">{{ entry.total_points }} pts</span>
+                  </div>
+                } @empty {
+                  <p class="m-0 text-sm text-secondary">AÃºn no hay pacientes con consentimiento activo.</p>
+                }
+              </div>
+            </section>
           </div>
 
           <form class="grid gap-5">
@@ -77,15 +116,28 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
 export class ReportsComponent implements OnInit {
   private clinicalDataService = inject(ClinicalDataService);
   private authService = inject(AuthService);
+  private engagementService = inject(EngagementService);
 
   loading = signal(true);
   patients = signal<RoleAccount[]>([]);
+  weeklySummary = signal<WeeklySummary | null>(null);
+  leaderboard = signal<LeaderboardEntry[]>([]);
   role = computed(() => this.authService.getRole() ?? 'paciente');
 
   ngOnInit(): void {
     this.clinicalDataService.visiblePatients().subscribe((patients) => {
       this.patients.set(patients);
       this.loading.set(false);
+    });
+    if (this.role() === 'paciente') {
+      this.engagementService.getWeeklySummary().subscribe({
+        next: (summary) => this.weeklySummary.set(summary),
+        error: () => this.weeklySummary.set(null),
+      });
+    }
+    this.engagementService.getLeaderboard().subscribe({
+      next: (entries) => this.leaderboard.set(entries),
+      error: () => this.leaderboard.set([]),
     });
   }
 
