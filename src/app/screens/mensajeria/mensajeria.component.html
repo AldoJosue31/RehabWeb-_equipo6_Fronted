@@ -9,9 +9,22 @@
 <div class="rw-card flex min-h-0 overflow-hidden font-sans text-main max-md:flex-col">
   <aside class="flex h-full w-[300px] shrink-0 flex-col border-r border-line bg-surface sm:w-[330px] max-md:h-[240px] max-md:w-full max-md:border-b max-md:border-r-0">
     <div class="grow overflow-y-auto">
-      @for(patient of patients(); track patient.id) {
+      @if (isLoadingConversations() && patients().length === 0) {
+        <div class="grid gap-0">
+          @for (_ of [1, 2, 3, 4]; track _) {
+            <div class="border-b border-line p-4">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <span class="rw-skeleton h-4 w-36"></span>
+                <span class="rw-skeleton h-3 w-12"></span>
+              </div>
+              <div class="rw-skeleton h-4 w-full"></div>
+            </div>
+          }
+        </div>
+      } @else {
+        @for(patient of patients(); track patient.id) {
         <button
-          class="block w-full border-b border-line p-4 text-left transition duration-200 hover:bg-app"
+          class="block w-full border-b border-line p-4 text-left transition duration-[var(--baseline-motion-medium)] hover:bg-app"
           [ngClass]="patient.id === selectedPatientId() ? 'border-l-4 border-l-primary bg-primary-low' : 'border-l-4 border-l-transparent'"
           type="button"
           (click)="selectPatient(patient.id)"
@@ -24,6 +37,9 @@
             {{patient.lastMessagePreview}}
           </div>
         </button>
+        } @empty {
+          <p class="m-4 rounded-md bg-app p-4 text-sm text-secondary">No hay conversaciones disponibles.</p>
+        }
       }
     </div>
   </aside>
@@ -101,7 +117,28 @@
           </div>
         }
 
-        @for (msg of activeMessages(); track msg.id) {
+        @if (isLoadingMessages() && activeMessages().length === 0) {
+          <div class="grid gap-5">
+            <div class="flex justify-start">
+              <div class="w-[70%] rounded-xl border border-line bg-surface p-4 shadow-sm">
+                <div class="rw-skeleton mb-3 h-4 w-3/4"></div>
+                <div class="rw-skeleton h-4 w-1/2"></div>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <div class="w-[62%] rounded-xl bg-primary-low p-4 shadow-sm">
+                <div class="rw-skeleton mb-3 h-4 w-full"></div>
+                <div class="rw-skeleton h-4 w-2/5"></div>
+              </div>
+            </div>
+            <div class="flex justify-start">
+              <div class="w-[58%] rounded-xl border border-line bg-surface p-4 shadow-sm">
+                <div class="rw-skeleton h-4 w-4/5"></div>
+              </div>
+            </div>
+          </div>
+        } @else {
+          @for (msg of activeMessages(); track msg.id) {
           <div class="flex w-full" [ngClass]="msg.isMine ? 'justify-end' : 'justify-start'">
             <div
               class="max-w-[78%] rounded-xl px-4 py-3 text-sm leading-default shadow-sm sm:max-w-[70%]"
@@ -183,6 +220,11 @@
               </div>
             </div>
           </div>
+          } @empty {
+            <div class="grid grow place-items-center text-center">
+              <p class="m-0 rounded-md bg-surface px-4 py-3 text-sm text-secondary shadow-sm">Aún no hay mensajes en esta conversación.</p>
+            </div>
+          }
         }
       </div>
 
@@ -234,7 +276,7 @@
         <button
           class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition duration-200 hover:scale-105 hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60 disabled:hover:scale-100"
           (click)="sendMessage()"
-          [disabled]="!messageCtrl.value && !selectedFile()"
+          [disabled]="isSending() || (!messageCtrl.value && !selectedFile())"
         >
           <svg class="h-5 w-5 -translate-x-0.5" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576 6.636 10.07Zm6.787-8.201L1.591 6.602l4.339 2.76 7.494-7.493Z"/>

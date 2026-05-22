@@ -21,7 +21,7 @@ interface NavItem {
   template: `
     <div class="flex min-h-dvh bg-app font-sans text-main">
       <aside
-        class="sticky top-0 hidden h-dvh shrink-0 border-r border-line bg-surface transition-all duration-200 lg:flex lg:flex-col"
+        class="sticky top-0 hidden h-dvh shrink-0 border-r border-line bg-surface transition-all duration-[var(--baseline-motion-medium)] ease-[var(--baseline-motion-ease)] lg:flex lg:flex-col"
         [ngClass]="collapsed() ? 'w-[88px]' : 'w-[260px]'"
       >
         <div class="flex h-[76px] items-center gap-3 border-b border-line px-5">
@@ -36,12 +36,12 @@ interface NavItem {
         </div>
 
         <button
-          class="absolute -right-4 top-[68px] grid h-8 w-8 place-items-center rounded-full border border-line bg-surface text-secondary shadow-sm transition duration-200 hover:border-primary hover:text-primary"
+          class="absolute -right-4 top-[68px] grid h-8 w-8 place-items-center rounded-full border border-line bg-surface text-secondary shadow-sm transition duration-[var(--baseline-motion-medium)] hover:border-primary hover:text-primary"
           type="button"
           (click)="toggleCollapsed()"
           [attr.aria-label]="collapsed() ? 'Expandir menu' : 'Contraer menu'"
         >
-          <svg class="h-4 w-4 transition duration-200" [ngClass]="collapsed() ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <svg class="h-4 w-4 transition duration-[var(--baseline-motion-medium)]" [ngClass]="collapsed() ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
@@ -54,7 +54,8 @@ interface NavItem {
             <div class="grid gap-1">
               @for (item of mainNav(); track item.path) {
                 <a
-                  class="group flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-secondary transition duration-200 hover:bg-primary-low hover:text-primary"
+                  class="group flex min-h-11 items-center gap-3 rounded-md text-sm font-medium text-secondary transition duration-[var(--baseline-motion-medium)] hover:bg-primary-low hover:text-primary"
+                  [ngClass]="collapsed() ? 'justify-center px-0' : 'px-3'"
                   [routerLink]="item.path"
                   routerLinkActive="bg-primary-low text-primary"
                   [routerLinkActiveOptions]="{ exact: true }"
@@ -78,7 +79,8 @@ interface NavItem {
             <div class="grid gap-1">
               @for (item of settingsNav(); track item.path) {
                 <a
-                  class="group flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-secondary transition duration-200 hover:bg-primary-low hover:text-primary"
+                  class="group flex min-h-11 items-center gap-3 rounded-md text-sm font-medium text-secondary transition duration-[var(--baseline-motion-medium)] hover:bg-primary-low hover:text-primary"
+                  [ngClass]="collapsed() ? 'justify-center px-0' : 'px-3'"
                   [routerLink]="item.path"
                   routerLinkActive="bg-primary-low text-primary"
                   [routerLinkActiveOptions]="{ exact: true }"
@@ -94,10 +96,11 @@ interface NavItem {
               }
 
               <button
-                class="flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-secondary transition duration-200 hover:bg-danger-bg hover:text-danger"
+                class="flex min-h-11 items-center gap-3 rounded-md text-left text-sm font-medium text-secondary transition duration-[var(--baseline-motion-medium)] hover:bg-danger-bg hover:text-danger"
+                [ngClass]="collapsed() ? 'justify-center px-0' : 'px-3'"
                 type="button"
                 (click)="logout()"
-                [attr.title]="collapsed() ? 'Cerrar sesion' : null"
+                [attr.title]="collapsed() ? 'Cerrar sesi\u00f3n' : null"
               >
                 <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M10 17l5-5-5-5M15 12H3M21 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -164,7 +167,7 @@ interface NavItem {
           </aside>
         }
 
-        <main class="min-w-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8 lg:px-10">
+        <main class="rw-route-host min-w-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8 lg:px-10">
           <router-outlet></router-outlet>
         </main>
       </div>

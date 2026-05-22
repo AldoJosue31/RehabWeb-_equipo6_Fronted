@@ -55,6 +55,8 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
   selectedFile = signal<File | null>(null);
   errorMsg = signal<string>('');
   isSending = signal<boolean>(false);
+  isLoadingConversations = signal<boolean>(true);
+  isLoadingMessages = signal<boolean>(false);
   hasMoreMessages = signal<boolean>(false);
   isLoadingOlder = signal<boolean>(false);
   imagePreviewUrl = signal<string | null>(null);
@@ -183,30 +185,31 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
       .pipe(startWith(0))
       .subscribe(() => {
         const convId = this.selectedConvId();
-        if (convId) this.cargarMensajes(convId);
+        if (convId) this.cargarMensajes(convId, undefined, false);
       });
 
     const conversacionesSub = interval(5000)
       .pipe(startWith(0))
-      .subscribe(() => {
-        this.mensajeriaService.getConversaciones().subscribe({
-          next: data => this.conversations.set(data),
-          error: err => this.handleAuthError(err)
-        });
-      });
+      .subscribe(() => this.cargarConversaciones(false));
 
     this.pollingSubs = [mensajesSub, conversacionesSub];
   }
 
-  cargarConversaciones() {
+  cargarConversaciones(showLoading = true) {
+    if (showLoading && this.conversations().length === 0) this.isLoadingConversations.set(true);
+
     this.mensajeriaService.getConversaciones().subscribe({
       next: (data) => {
         this.conversations.set(data);
+        this.isLoadingConversations.set(false);
         if (data.length > 0 && !this.selectedConvId()) {
           this.selectPatient(data[0].id.toString());
         }
       },
-      error: (err) => this.handleAuthError(err)
+      error: (err) => {
+        this.isLoadingConversations.set(false);
+        this.handleAuthError(err);
+      }
     });
   }
 
@@ -217,8 +220,11 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
     this.jitsiRoomUrl.set(null);
   }
 
-   cargarMensajes(convId: number, before?: string) {
+   cargarMensajes(convId: number, before?: string, showLoading = true) {
     if (before) this.isLoadingOlder.set(true);
+    if (!before && showLoading && !this.messages().some(message => message.conversation === convId)) {
+      this.isLoadingMessages.set(true);
+    }
 
     this.mensajeriaService.getMensajes(convId, before).subscribe({
       next: (page) => {
@@ -246,9 +252,11 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
               this.activeVideoCallId.set(null);
           }
         }
+        this.isLoadingMessages.set(false);
         this.isLoadingOlder.set(false);
       },
       error: (err) => {
+        this.isLoadingMessages.set(false);
         this.isLoadingOlder.set(false);
         this.handleAuthError(err);
       }

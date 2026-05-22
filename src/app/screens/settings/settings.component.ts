@@ -4,6 +4,7 @@ import { RoleAccount } from '../../services/account-admin.service';
 import { AuthService } from '../../services/auth.service';
 import { ClinicalDataService } from '../../services/clinical-data.service';
 import { EngagementService, MotivationProfile } from '../../services/engagement.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-settings',
@@ -17,6 +18,36 @@ import { EngagementService, MotivationProfile } from '../../services/engagement.
           <p class="rw-subtitle">Información real de la cuenta autenticada.</p>
         </div>
       </header>
+
+      <article class="rw-card rw-card-pad">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="m-0 text-base font-bold text-main">Tema de la interfaz</h2>
+            <p class="m-0 mt-1 text-sm text-secondary">{{ isDarkTheme() ? 'Modo oscuro activo' : 'Modo claro activo' }}</p>
+          </div>
+
+          <label class="rw-theme-switch" title="Cambiar tema">
+            <input
+              class="rw-theme-switch__input"
+              type="checkbox"
+              role="switch"
+              [checked]="isDarkTheme()"
+              (change)="toggleTheme($any($event.target).checked)"
+            />
+            <span class="rw-theme-switch__thumb" aria-hidden="true">
+              @if (isDarkTheme()) {
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              } @else {
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 4V2M12 22v-2M4.93 4.93 3.52 3.52M20.49 20.49l-1.42-1.42M4 12H2M22 12h-2M4.93 19.07l-1.41 1.42M20.49 3.52l-1.42 1.41M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              }
+            </span>
+          </label>
+        </div>
+      </article>
 
       <article class="rw-card rw-card-pad grid gap-5">
         @if (loading()) {
@@ -85,10 +116,12 @@ export class SettingsComponent implements OnInit {
   private authService = inject(AuthService);
   private clinicalDataService = inject(ClinicalDataService);
   private engagementService = inject(EngagementService);
+  private themeService = inject(ThemeService);
 
   loading = signal(true);
   account = signal<RoleAccount | null>(null);
   motivation = signal<MotivationProfile | null>(null);
+  isDarkTheme = this.themeService.isDark;
   role = computed(() => this.authService.getRole() ?? 'paciente');
   roleLabel = computed(() => this.role() === 'terapeuta' ? 'Terapeuta' : 'Paciente');
 
@@ -108,5 +141,9 @@ export class SettingsComponent implements OnInit {
 
   toggleRanking(leaderboard_opt_in: boolean): void {
     this.engagementService.updateMotivation({ leaderboard_opt_in }).subscribe((motivation) => this.motivation.set(motivation));
+  }
+
+  toggleTheme(isDark: boolean): void {
+    this.themeService.setDark(isDark);
   }
 }

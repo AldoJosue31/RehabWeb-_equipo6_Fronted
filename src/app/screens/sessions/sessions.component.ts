@@ -33,22 +33,22 @@ import {
               <div>
                 <h2 class="m-0 text-base font-bold text-primary">{{ session.positive_feedback }}</h2>
                 <p class="m-0 mt-1 text-sm text-secondary">
-                  +{{ session.points_awarded }} puntos Â· bonus velocidad {{ session.speed_bonus_points }} Â· racha {{ session.streak_days }} dÃ­as
+                  +{{ session.points_awarded }} puntos &middot; bonus velocidad {{ session.speed_bonus_points }} &middot; racha {{ session.streak_days }} d&iacute;as
                 </p>
               </div>
-              <span class="rounded-md bg-surface px-4 py-2 text-sm font-bold text-primary">VisualizaciÃ³n inmediata</span>
+              <span class="rounded-md bg-surface px-4 py-2 text-sm font-bold text-primary">Visualizaci&oacute;n inmediata</span>
             </div>
           </article>
         }
 
-        <div class="grid gap-5 xl:grid-cols-[minmax(320px,420px)_1fr]">
-          <article class="rw-card rw-card-pad">
-            <h2 class="m-0 text-lg font-bold leading-solid text-main">Registrar sesiÃ³n</h2>
+        <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(280px,420px)_minmax(0,1fr)]">
+          <article class="rw-card rw-card-pad min-w-0">
+            <h2 class="m-0 text-lg font-bold leading-solid text-main">Registrar sesi&oacute;n</h2>
             <form class="mt-5 grid gap-4" [formGroup]="sessionForm" (ngSubmit)="submit()">
               @if (role() === 'terapeuta') {
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
                   Paciente
-                  <select class="rounded-md border border-line bg-app px-4 py-3 text-sm normal-case tracking-normal text-main" formControlName="paciente">
+                  <select class="rw-input normal-case tracking-normal" formControlName="paciente">
                     @for (patient of patients(); track patient.id) {
                       <option [value]="patient.id">{{ displayName(patient) }}</option>
                     }
@@ -56,41 +56,41 @@ import {
                 </label>
               }
 
-              <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
+              <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
                 Ejercicio
-                <input class="rounded-md border border-line bg-app px-4 py-3 text-sm normal-case tracking-normal text-main" formControlName="exercise_name" maxlength="140" />
+                <input class="rw-input normal-case tracking-normal" formControlName="exercise_name" maxlength="140" />
               </label>
 
-              <div class="grid gap-4 sm:grid-cols-2">
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
+              <div class="grid min-w-0 gap-4 sm:grid-cols-2">
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
                   Repeticiones
-                  <input class="rounded-md border border-line bg-app px-4 py-3 text-sm normal-case tracking-normal text-main" type="number" min="0" formControlName="repetitions_completed" />
+                  <input class="rw-input normal-case tracking-normal" type="number" min="0" formControlName="repetitions_completed" />
                 </label>
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
                   Objetivo
-                  <input class="rounded-md border border-line bg-app px-4 py-3 text-sm normal-case tracking-normal text-main" type="number" min="0" formControlName="planned_repetitions" />
+                  <input class="rw-input normal-case tracking-normal" type="number" min="0" formControlName="planned_repetitions" />
                 </label>
               </div>
 
-              <div class="grid gap-4 sm:grid-cols-2">
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
-                  DuraciÃ³n (seg)
-                  <input class="rounded-md border border-line bg-app px-4 py-3 text-sm normal-case tracking-normal text-main" type="number" min="0" formControlName="duration_seconds" />
+              <div class="grid min-w-0 gap-4 sm:grid-cols-2">
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
+                  Duraci&oacute;n (seg)
+                  <input class="rw-input normal-case tracking-normal" type="number" min="0" formControlName="duration_seconds" />
                 </label>
-                <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
+                <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
                   Dolor 0-10
-                  <input class="rounded-md border border-line bg-app px-4 py-3 text-sm normal-case tracking-normal text-main" type="number" min="0" max="10" formControlName="pain_level" />
+                  <input class="rw-input normal-case tracking-normal" type="number" min="0" max="10" formControlName="pain_level" />
                 </label>
               </div>
 
-              <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
+              <label class="grid min-w-0 gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
                 Movilidad (opcional)
-                <input class="rounded-md border border-line bg-app px-4 py-3 text-sm normal-case tracking-normal text-main" type="number" min="0" step="0.01" formControlName="mobility_score" />
+                <input class="rw-input normal-case tracking-normal" type="number" min="0" step="0.01" formControlName="mobility_score" />
               </label>
 
               <button class="rw-action rw-action--primary" type="submit" [disabled]="sessionForm.invalid || saving()">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                Guardar sesiÃ³n
+                Guardar sesi&oacute;n
               </button>
             </form>
           </article>
@@ -113,7 +113,7 @@ import {
               </div>
 
               <article class="rw-card rw-card-pad">
-                <h2 class="m-0 text-lg font-bold text-main">ColecciÃ³n de insignias</h2>
+                <h2 class="m-0 text-lg font-bold text-main">Colecci&oacute;n de insignias</h2>
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
                   @for (badge of badges(); track badge.code) {
                     <div class="rounded-md border border-primary bg-primary-low p-4">
@@ -122,7 +122,7 @@ import {
                       <p class="m-0 mt-2 text-xs text-muted">{{ badge.awarded_at | date:'medium' }}</p>
                     </div>
                   } @empty {
-                    <p class="rounded-md bg-app p-4 text-sm text-secondary">AÃºn no hay insignias desbloqueadas.</p>
+                    <p class="rounded-md bg-app p-4 text-sm text-secondary">A&uacute;n no hay insignias desbloqueadas.</p>
                   }
                 </div>
               </article>
@@ -136,7 +136,7 @@ import {
                     <div class="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <strong class="text-sm text-main">{{ session.exercise_name }}</strong>
-                        <p class="m-0 mt-1 text-xs text-secondary">{{ session.paciente_nombre }} Â· {{ session.performed_at | date:'medium' }}</p>
+                        <p class="m-0 mt-1 text-xs text-secondary">{{ session.paciente_nombre }} &middot; {{ session.performed_at | date:'medium' }}</p>
                       </div>
                       <span class="rounded-md px-3 py-1 text-xs font-bold" [ngClass]="session.pain_level >= 7 ? 'bg-danger-bg text-danger' : 'bg-primary-low text-primary'">
                         Dolor {{ session.pain_level }}/10

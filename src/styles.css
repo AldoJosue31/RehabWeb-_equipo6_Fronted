@@ -16,6 +16,10 @@
   --baseline-warning: #ffb84d;
   --baseline-info: #4d94ff;
   --baseline-focus: #00a781;
+  --baseline-motion-fast: 120ms;
+  --baseline-motion-medium: 200ms;
+  --baseline-motion-slow: 320ms;
+  --baseline-motion-ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
 .theme-dark {
@@ -84,6 +88,9 @@
     margin: 0;
     min-width: 320px;
     background: var(--baseline-app);
+    transition:
+      background-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      color var(--baseline-motion-medium) var(--baseline-motion-ease);
   }
 
   *,
@@ -102,6 +109,31 @@
   select,
   textarea {
     font: inherit;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition:
+      background-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      border-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      box-shadow var(--baseline-motion-medium) var(--baseline-motion-ease),
+      color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      opacity var(--baseline-motion-fast) var(--baseline-motion-ease),
+      transform var(--baseline-motion-fast) var(--baseline-motion-ease);
+  }
+
+  button:not(:disabled):active,
+  a:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  input:hover,
+  select:hover,
+  textarea:hover {
+    border-color: color-mix(in srgb, var(--baseline-focus) 55%, var(--baseline-border));
   }
 }
 
@@ -145,6 +177,10 @@
     border-radius: 8px;
     background: var(--baseline-surface);
     box-shadow: var(--shadow-sm);
+    transition:
+      background-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      border-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      box-shadow var(--baseline-motion-medium) var(--baseline-motion-ease);
   }
 
   .rw-card-pad {
@@ -169,11 +205,17 @@
     background: var(--baseline-app);
     padding: 0 14px;
     color: var(--baseline-secondary);
+    transition:
+      background-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      border-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      box-shadow var(--baseline-motion-medium) var(--baseline-motion-ease),
+      transform var(--baseline-motion-fast) var(--baseline-motion-ease);
   }
 
   .rw-field:focus-within {
     border-color: var(--baseline-focus);
     box-shadow: 0 0 0 3px rgb(0 167 129 / 0.14);
+    transform: translateY(-1px);
   }
 
   .rw-field input,
@@ -199,6 +241,18 @@
     font-size: 14px;
     font-weight: 700;
     box-shadow: var(--shadow-sm);
+    transition:
+      background-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      border-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      box-shadow var(--baseline-motion-medium) var(--baseline-motion-ease),
+      color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      transform var(--baseline-motion-fast) var(--baseline-motion-ease);
+  }
+
+  .rw-action:hover:not(:disabled) {
+    border-color: var(--baseline-focus);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
   }
 
   .rw-action--primary {
@@ -211,6 +265,136 @@
     border-radius: 8px;
     background: var(--baseline-app);
     padding: 16px;
+  }
+
+  .rw-input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--baseline-border);
+    border-radius: 8px;
+    background: var(--baseline-app);
+    padding: 12px 14px;
+    color: var(--baseline-text);
+    font-size: 14px;
+    outline: 0;
+  }
+
+  .rw-input:focus {
+    border-color: var(--baseline-focus);
+    box-shadow: 0 0 0 3px rgb(0 167 129 / 0.14);
+    transform: translateY(-1px);
+  }
+
+  .rw-route-host {
+    view-transition-name: rw-route;
+  }
+
+  .rw-route-host > *:not(router-outlet) {
+    animation: rw-route-enter var(--baseline-motion-slow) var(--baseline-motion-ease);
+  }
+
+  .rw-skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--baseline-border) 65%, var(--baseline-surface));
+  }
+
+  .rw-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--baseline-surface) 72%, transparent),
+      transparent
+    );
+    animation: rw-skeleton-shimmer 1.25s var(--baseline-motion-ease) infinite;
+  }
+
+  .rw-theme-switch {
+    position: relative;
+    display: inline-flex;
+    width: 66px;
+    height: 34px;
+    flex-shrink: 0;
+    align-items: center;
+    border: 1px solid var(--baseline-border);
+    border-radius: 8px;
+    background: var(--baseline-app);
+    padding: 3px;
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.08);
+    cursor: pointer;
+  }
+
+  .rw-theme-switch__input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .rw-theme-switch__thumb {
+    display: grid;
+    width: 28px;
+    height: 26px;
+    place-items: center;
+    border-radius: 6px;
+    background: var(--baseline-surface);
+    color: var(--baseline-secondary);
+    box-shadow: var(--shadow-sm);
+    transition:
+      background-color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      color var(--baseline-motion-medium) var(--baseline-motion-ease),
+      transform var(--baseline-motion-medium) var(--baseline-motion-ease);
+  }
+
+  .rw-theme-switch:has(.rw-theme-switch__input:checked) {
+    border-color: var(--baseline-primary);
+    background: var(--baseline-primary-low);
+  }
+
+  .rw-theme-switch:has(.rw-theme-switch__input:checked) .rw-theme-switch__thumb {
+    transform: translateX(30px);
+    background: var(--baseline-primary);
+    color: #fff;
+  }
+}
+
+@keyframes rw-route-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rw-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+::view-transition-old(rw-route),
+::view-transition-new(rw-route) {
+  animation-duration: var(--baseline-motion-slow);
+  animation-timing-function: var(--baseline-motion-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
   }
 }
 
