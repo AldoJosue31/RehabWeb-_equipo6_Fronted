@@ -9,13 +9,15 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="mx-auto grid max-w-4xl gap-5">
-      <header>
-        <h1 class="m-0 text-2xl font-bold leading-solid text-nav">Generación de Reportes</h1>
-        <p class="mt-1 text-sm leading-default text-secondary">Reportes preparados únicamente con pacientes reales visibles para tu rol.</p>
+    <section class="rw-page rw-page--narrow">
+      <header class="rw-page-header">
+        <div>
+          <h1 class="rw-title">Generación de Reportes</h1>
+          <p class="rw-subtitle">Reportes preparados únicamente con pacientes reales visibles para tu rol.</p>
+        </div>
       </header>
 
-      <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
+      <article class="rw-card rw-card-pad">
         @if (loading()) {
           <p class="m-0 text-sm text-secondary">Cargando datos reales...</p>
         } @else {
@@ -32,7 +34,7 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
           <form class="grid gap-5">
             <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
               Selección de paciente
-              <select class="rounded-md border border-line bg-surface px-4 py-3 text-sm font-medium normal-case tracking-normal text-main outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" [disabled]="patients().length === 0">
+              <select class="rounded-md border border-line bg-app px-4 py-3 text-sm font-medium normal-case tracking-normal text-main outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" [disabled]="patients().length === 0">
                 @for (patient of patients(); track patient.id) {
                   <option [value]="patient.id">{{ displayName(patient) }}</option>
                 } @empty {
@@ -44,11 +46,11 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
             <div class="grid gap-5 sm:grid-cols-2">
               <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
                 Fecha de inicio
-                <input class="rounded-md border border-line bg-surface px-4 py-3 text-sm font-medium normal-case tracking-normal text-main outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type="date" />
+                <input class="rounded-md border border-line bg-app px-4 py-3 text-sm font-medium normal-case tracking-normal text-main outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type="date" />
               </label>
               <label class="grid gap-2 text-xs font-bold uppercase tracking-wide text-secondary">
                 Fecha de fin
-                <input class="rounded-md border border-line bg-surface px-4 py-3 text-sm font-medium normal-case tracking-normal text-main outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type="date" />
+                <input class="rounded-md border border-line bg-app px-4 py-3 text-sm font-medium normal-case tracking-normal text-main outline-none focus:border-focus focus:ring-2 focus:ring-focus/20" type="date" />
               </label>
             </div>
 

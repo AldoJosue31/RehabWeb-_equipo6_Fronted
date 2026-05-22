@@ -8,30 +8,30 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="mx-auto grid max-w-6xl gap-5">
-      <header class="flex flex-wrap items-start justify-between gap-4">
+    <section class="rw-page">
+      <header class="rw-page-header">
         <div>
-          <h1 class="m-0 text-2xl font-bold leading-solid text-nav">Directorio de Pacientes</h1>
-          <p class="mt-1 text-sm leading-default text-secondary">Pacientes reales asociados al terapeuta autenticado.</p>
+          <h1 class="rw-title">Directorio de Pacientes</h1>
+          <p class="rw-subtitle">Pacientes reales asociados al terapeuta autenticado.</p>
         </div>
       </header>
 
       @if (loading()) {
-        <div class="rounded-lg border border-line bg-surface p-6 text-sm text-secondary shadow-sm">Cargando pacientes reales...</div>
+        <div class="rw-card rw-card-pad text-sm text-secondary">Cargando pacientes reales...</div>
       } @else if (errorMsg()) {
         <div class="rounded-lg border border-danger bg-danger-bg p-4 text-sm font-bold text-danger">{{ errorMsg() }}</div>
       } @else {
-        <div class="grid gap-3 rounded-lg border border-line bg-surface p-4 shadow-sm md:grid-cols-[1fr_auto]">
-          <label class="flex items-center gap-3 rounded-md border border-line bg-app px-4 py-3 text-sm text-secondary focus-within:border-focus focus-within:ring-2 focus-within:ring-focus/20">
+        <div class="rw-card rw-toolbar">
+          <label class="rw-field text-sm">
             <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
             <input class="w-full bg-transparent outline-none placeholder:text-muted" placeholder="Buscar en pacientes cargados..." (input)="updateSearch($any($event.target).value)" />
           </label>
-          <span class="flex items-center justify-center rounded-md border border-line bg-surface px-4 py-3 text-sm font-bold text-secondary">{{ filteredPatients().length }} registros</span>
+          <span class="rw-action">{{ filteredPatients().length }} registros</span>
         </div>
 
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           @for (patient of filteredPatients(); track patient.id) {
-            <article class="rounded-lg border border-line bg-surface p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <article class="rw-card p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
               <div class="mb-4 h-1 rounded-full" [ngClass]="statusBarClass(patient)"></div>
               <div class="mb-5 flex items-start justify-between gap-3">
                 <div class="min-w-0">

@@ -104,3 +104,128 @@
     font: inherit;
   }
 }
+
+@layer components {
+  .rw-page {
+    width: 95%;
+    margin-inline: auto;
+    display: grid;
+    gap: 20px;
+  }
+
+  .rw-page--narrow {
+    width: 95%;
+  }
+
+  .rw-page-header {
+    min-height: 54px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .rw-title {
+    margin: 0;
+    color: var(--baseline-nav);
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  .rw-subtitle {
+    margin: 4px 0 0;
+    color: var(--baseline-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .rw-card {
+    border: 1px solid var(--baseline-border);
+    border-radius: 8px;
+    background: var(--baseline-surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .rw-card-pad {
+    padding: 20px;
+  }
+
+  .rw-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+  }
+
+  .rw-field {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--baseline-border);
+    border-radius: 8px;
+    background: var(--baseline-app);
+    padding: 0 14px;
+    color: var(--baseline-secondary);
+  }
+
+  .rw-field:focus-within {
+    border-color: var(--baseline-focus);
+    box-shadow: 0 0 0 3px rgb(0 167 129 / 0.14);
+  }
+
+  .rw-field input,
+  .rw-field select {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--baseline-text);
+    outline: 0;
+  }
+
+  .rw-action {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--baseline-border);
+    border-radius: 8px;
+    background: var(--baseline-surface);
+    padding: 0 16px;
+    color: var(--baseline-text);
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .rw-action--primary {
+    border-color: var(--baseline-primary);
+    background: var(--baseline-primary);
+    color: #fff;
+  }
+
+  .rw-muted-panel {
+    border-radius: 8px;
+    background: var(--baseline-app);
+    padding: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .rw-page {
+    width: 100%;
+    gap: 16px;
+  }
+
+  .rw-page-header,
+  .rw-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .rw-page-header {
+    display: grid;
+  }
+}

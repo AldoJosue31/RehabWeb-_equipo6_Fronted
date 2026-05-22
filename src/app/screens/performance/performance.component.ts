@@ -8,17 +8,23 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="mx-auto grid max-w-6xl gap-5">
-      <header>
-        <h1 class="m-0 text-2xl font-bold leading-solid text-nav">Comparativa de Desempeño</h1>
-        <p class="mt-1 text-sm leading-default text-secondary">Vista basada solo en perfiles clínicos reales disponibles.</p>
+    <section class="rw-page">
+      <header class="rw-page-header">
+        <div>
+          <h1 class="rw-title">Comparativa de Desempeño</h1>
+          <p class="rw-subtitle">Vista basada solo en perfiles clínicos reales disponibles.</p>
+        </div>
+        <div class="rw-action p-1">
+          <button class="rounded-md bg-surface px-4 py-2 text-xs font-bold text-main" type="button">Vista Individual</button>
+          <button class="rounded-md px-4 py-2 text-xs font-bold text-secondary" type="button" disabled>Comparativa Grupal</button>
+        </div>
       </header>
 
       @if (loading()) {
-        <div class="rounded-lg border border-line bg-surface p-6 text-sm text-secondary shadow-sm">Cargando pacientes...</div>
+        <div class="rw-card rw-card-pad text-sm text-secondary">Cargando pacientes...</div>
       } @else {
-        <div class="grid gap-5 xl:grid-cols-[320px_1fr]">
-          <aside class="rounded-lg border border-line bg-surface p-4 shadow-sm">
+        <div class="grid gap-5 xl:grid-cols-[minmax(280px,360px)_1fr]">
+          <aside class="rw-card rw-card-pad">
             <h2 class="m-0 mb-3 text-base font-bold text-main">Pacientes reales</h2>
             <div class="grid gap-2">
               @for (patient of patients(); track patient.id) {
@@ -37,7 +43,7 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
             </div>
           </aside>
 
-          <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
+          <article class="rw-card rw-card-pad">
             @if (selectedPatient(); as patient) {
               <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -48,19 +54,19 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
               </div>
 
               <dl class="grid gap-4 md:grid-cols-2">
-                <div class="rounded-md bg-app p-4">
+                <div class="rw-muted-panel">
                   <dt class="text-xs font-bold uppercase tracking-wide text-muted">Diagnóstico</dt>
                   <dd class="mt-2 text-sm font-bold text-main">{{ patient.diagnostico_principal || 'Sin dato real' }}</dd>
                 </div>
-                <div class="rounded-md bg-app p-4">
+                <div class="rw-muted-panel">
                   <dt class="text-xs font-bold uppercase tracking-wide text-muted">Nivel movilidad</dt>
                   <dd class="mt-2 text-sm font-bold text-main">{{ patient.nivel_movilidad || 'Sin dato real' }}</dd>
                 </div>
-                <div class="rounded-md bg-app p-4">
+                <div class="rw-muted-panel">
                   <dt class="text-xs font-bold uppercase tracking-wide text-muted">Estrategia validación</dt>
                   <dd class="mt-2 text-sm font-bold text-main">{{ patient.estrategia_validacion || 'Sin dato real' }}</dd>
                 </div>
-                <div class="rounded-md bg-app p-4">
+                <div class="rw-muted-panel">
                   <dt class="text-xs font-bold uppercase tracking-wide text-muted">Estrategia progreso</dt>
                   <dd class="mt-2 text-sm font-bold text-main">{{ patient.estrategia_progreso || 'Sin dato real' }}</dd>
                 </div>

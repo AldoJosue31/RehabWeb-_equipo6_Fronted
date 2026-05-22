@@ -9,14 +9,14 @@ import { ClinicalDataService, DashboardData } from '../../services/clinical-data
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="mx-auto grid max-w-6xl gap-5">
-      <header class="flex flex-wrap items-start justify-between gap-4">
+    <section class="rw-page">
+      <header class="rw-page-header">
         <div>
-          <h1 class="m-0 text-2xl font-bold leading-solid text-nav">{{ role() === 'paciente' ? 'Mi tablero' : 'Tablero de Control' }}</h1>
-          <p class="mt-1 text-sm leading-default text-secondary">{{ subtitle() }}</p>
+          <h1 class="rw-title">{{ role() === 'paciente' ? 'Mi tablero' : 'Tablero de Control' }}</h1>
+          <p class="rw-subtitle">{{ subtitle() }}</p>
         </div>
         @if (role() === 'terapeuta') {
-          <a class="flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition duration-200 hover:bg-primary/90" href="/mensajeria">
+          <a class="rw-action rw-action--primary rounded-full" href="/mensajeria">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
             Abrir mensajería
           </a>
@@ -24,13 +24,30 @@ import { ClinicalDataService, DashboardData } from '../../services/clinical-data
       </header>
 
       @if (loading()) {
-        <div class="rounded-lg border border-line bg-surface p-6 text-sm text-secondary shadow-sm">Cargando información real del usuario...</div>
+        <div class="rw-card rw-card-pad text-sm text-secondary">Cargando información real del usuario...</div>
       } @else if (errorMsg()) {
         <div class="rounded-lg border border-danger bg-danger-bg p-4 text-sm font-bold text-danger">{{ errorMsg() }}</div>
       } @else {
+        @if (role() === 'terapeuta') {
+          <article class="rounded-lg border border-warning/60 bg-warning/10 p-4 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-warning/20 text-warning">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4m0 4h.01M10.3 4.3 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <div>
+                  <h2 class="m-0 text-base font-bold leading-solid text-main">Alerta de Inactividad de Pacientes</h2>
+                  <p class="m-0 text-sm text-secondary">{{ inactiveCount() }} pacientes requieren atención inmediata.</p>
+                </div>
+              </div>
+              <span class="rounded-full border border-warning/40 bg-surface px-4 py-2 text-xs font-bold text-main">Ver todos ({{ inactiveCount() }})</span>
+            </div>
+          </article>
+        }
+
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           @for (metric of metrics(); track metric.label) {
-            <article class="rounded-lg border border-line bg-surface p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <article class="rw-card rw-card-pad transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
               <p class="m-0 text-sm font-medium text-secondary">{{ metric.label }}</p>
               <p class="mt-2 text-2xl font-bold leading-solid text-main">{{ metric.value }}</p>
               <span class="mt-4 inline-flex rounded-full px-2 py-1 text-xs font-bold" [ngClass]="metric.className">{{ metric.caption }}</span>
@@ -39,7 +56,7 @@ import { ClinicalDataService, DashboardData } from '../../services/clinical-data
         </div>
 
         @if (role() === 'terapeuta') {
-          <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
+          <article class="rw-card rw-card-pad">
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 class="m-0 text-lg font-bold leading-solid text-main">Pacientes visibles</h2>
@@ -50,7 +67,7 @@ import { ClinicalDataService, DashboardData } from '../../services/clinical-data
 
             <div class="grid gap-3 md:grid-cols-2">
               @for (patient of patients(); track patient.id) {
-                <div class="rounded-lg border border-line bg-app p-4">
+                <div class="rw-muted-panel">
                   <div class="flex items-start justify-between gap-3">
                     <div>
                       <h3 class="m-0 text-base font-bold leading-solid text-main">{{ displayName(patient) }}</h3>
@@ -65,7 +82,7 @@ import { ClinicalDataService, DashboardData } from '../../services/clinical-data
             </div>
           </article>
         } @else {
-          <article class="rounded-lg border border-line bg-surface p-5 shadow-sm">
+          <article class="rw-card rw-card-pad">
             <h2 class="m-0 text-lg font-bold leading-solid text-main">Información clínica</h2>
             @if (currentAccount()) {
               <dl class="mt-5 grid gap-4 sm:grid-cols-2">
@@ -105,6 +122,7 @@ export class DashboardComponent implements OnInit {
   role = computed(() => this.authService.getRole() ?? 'paciente');
   patients = computed(() => this.dashboardData()?.patients ?? []);
   currentAccount = computed(() => this.dashboardData()?.currentAccount ?? null);
+  inactiveCount = computed(() => this.patients().filter((patient) => patient.estado === 'inactivo').length);
   subtitle = computed(() => this.role() === 'paciente'
     ? 'Información real asociada a tu cuenta y plan clínico.'
     : 'Resumen basado en pacientes y conversaciones reales vinculadas a tu usuario.');

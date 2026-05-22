@@ -9,13 +9,15 @@ import { ClinicalDataService } from '../../services/clinical-data.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="mx-auto grid max-w-4xl gap-5">
-      <header>
-        <h1 class="m-0 text-2xl font-bold leading-solid text-nav">Configuraciones</h1>
-        <p class="mt-1 text-sm leading-default text-secondary">Información real de la cuenta autenticada.</p>
+    <section class="rw-page rw-page--narrow">
+      <header class="rw-page-header">
+        <div>
+          <h1 class="rw-title">Configuraciones</h1>
+          <p class="rw-subtitle">Información real de la cuenta autenticada.</p>
+        </div>
       </header>
 
-      <article class="grid gap-5 rounded-lg border border-line bg-surface p-5 shadow-sm">
+      <article class="rw-card rw-card-pad grid gap-5">
         @if (loading()) {
           <p class="m-0 text-sm text-secondary">Cargando cuenta real...</p>
         } @else if (account(); as currentAccount) {

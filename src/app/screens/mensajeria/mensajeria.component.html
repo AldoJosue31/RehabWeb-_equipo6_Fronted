@@ -1,24 +1,17 @@
-<div class="flex h-[calc(100dvh-112px)] min-h-[620px] overflow-hidden rounded-lg border border-line bg-surface font-sans text-main shadow-sm lg:h-[calc(100dvh-48px)] max-md:flex-col">
-  <aside class="flex h-full w-[300px] shrink-0 flex-col border-r border-line bg-surface sm:w-[350px] max-md:h-[240px] max-md:w-full max-md:border-b max-md:border-r-0">
-    <div class="border-b border-line p-6 sm:p-8">
-      <h2 class="m-0 text-xl font-bold leading-solid text-main">Mensajes</h2>
-      <div class="mt-3 flex items-center justify-between gap-3 text-xs font-medium text-secondary">
-        <span class="min-w-0 truncate">{{ currentUsername || 'Usuario' }} | {{ roleName(currentUserRole) }}</span>
-        <button
-          class="rounded-md border border-line bg-app px-3 py-2 text-xs font-bold text-main transition duration-200 hover:border-danger hover:text-danger"
-          type="button"
-          (click)="logout()"
-          title="Cerrar sesión"
-        >
-          Salir
-        </button>
-      </div>
+<section class="rw-page h-[calc(100dvh-48px)] grid-rows-[auto_minmax(0,1fr)]">
+  <header class="rw-page-header">
+    <div>
+      <h1 class="rw-title">Mensajería</h1>
+      <p class="rw-subtitle">{{ currentUsername || 'Usuario' }} | {{ roleName(currentUserRole) }}</p>
     </div>
+  </header>
 
+<div class="rw-card flex min-h-0 overflow-hidden font-sans text-main max-md:flex-col">
+  <aside class="flex h-full w-[300px] shrink-0 flex-col border-r border-line bg-surface sm:w-[330px] max-md:h-[240px] max-md:w-full max-md:border-b max-md:border-r-0">
     <div class="grow overflow-y-auto">
       @for(patient of patients(); track patient.id) {
         <button
-          class="block w-full border-b border-line p-5 text-left transition duration-200 hover:bg-app sm:p-6"
+          class="block w-full border-b border-line p-4 text-left transition duration-200 hover:bg-app"
           [ngClass]="patient.id === selectedPatientId() ? 'border-l-4 border-l-primary bg-primary-low' : 'border-l-4 border-l-transparent'"
           type="button"
           (click)="selectPatient(patient.id)"
@@ -36,7 +29,7 @@
   </aside>
 
   <main class="relative flex min-w-0 grow flex-col">
-    <header class="z-10 flex items-center justify-between gap-4 border-b border-line bg-surface p-4 shadow-sm sm:p-6">
+    <header class="z-10 flex items-center justify-between gap-4 border-b border-line bg-surface p-4 shadow-sm">
       <div class="flex min-w-0 items-center gap-4">
         <div class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary text-base font-bold text-white">
           {{activePatient().initials}}
@@ -90,7 +83,7 @@
         </div>
       </div>
     } @else {
-      <div class="flex grow flex-col gap-6 overflow-y-auto bg-app p-5 sm:p-8" #chatContainer>
+      <div class="flex grow flex-col gap-5 overflow-y-auto bg-app p-5" #chatContainer>
         <div class="mb-4 flex justify-center">
           <span class="flex items-center gap-2 rounded-full bg-line px-4 py-2 text-xs font-medium text-secondary">
             <svg class="h-3.5 w-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -182,7 +175,7 @@
         }
       </div>
 
-      <footer class="relative flex items-center gap-3 border-t border-line bg-surface p-4 sm:p-6">
+      <footer class="relative flex items-center gap-3 border-t border-line bg-surface p-4">
         @if(errorMsg()) {
           <div class="absolute -top-14 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-md border border-danger bg-danger-bg px-4 py-3 text-xs font-medium text-danger shadow-md">
             <svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -240,3 +233,4 @@
     }
   </main>
 </div>
+</section>

@@ -24,19 +24,19 @@ interface NavItem {
         class="sticky top-0 hidden h-dvh shrink-0 border-r border-line bg-surface transition-all duration-200 lg:flex lg:flex-col"
         [ngClass]="collapsed() ? 'w-[88px]' : 'w-[260px]'"
       >
-        <div class="flex h-20 items-center gap-3 border-b border-line px-5">
+        <div class="flex h-[76px] items-center gap-3 border-b border-line px-5">
           <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary text-white shadow-sm">
             <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 12h3l2-5 4 10 2-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </span>
           @if (!collapsed()) {
-            <strong class="text-base font-bold leading-solid text-nav">RehabWeb</strong>
+            <strong class="text-base font-bold leading-solid text-nav">PhysioMetrics</strong>
           }
         </div>
 
         <button
-          class="absolute -right-4 top-[72px] grid h-8 w-8 place-items-center rounded-full border border-line bg-surface text-secondary shadow-sm transition duration-200 hover:border-primary hover:text-primary"
+          class="absolute -right-4 top-[68px] grid h-8 w-8 place-items-center rounded-full border border-line bg-surface text-secondary shadow-sm transition duration-200 hover:border-primary hover:text-primary"
           type="button"
           (click)="toggleCollapsed()"
           [attr.aria-label]="collapsed() ? 'Expandir menu' : 'Contraer menu'"
@@ -133,7 +133,7 @@ interface NavItem {
                 <path d="M4 12h3l2-5 4 10 2-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </span>
-            <strong class="text-base font-bold text-nav">RehabWeb</strong>
+            <strong class="text-base font-bold text-nav">PhysioMetrics</strong>
           </div>
           <button class="rounded-md border border-line px-3 py-2 text-sm font-bold text-secondary" type="button" (click)="toggleMobileMenu()">
             Menu
@@ -164,7 +164,7 @@ interface NavItem {
           </aside>
         }
 
-        <main class="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <main class="min-w-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8 lg:px-10">
           <router-outlet></router-outlet>
         </main>
       </div>
