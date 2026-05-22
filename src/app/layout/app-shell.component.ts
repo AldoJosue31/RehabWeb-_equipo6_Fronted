@@ -36,7 +36,7 @@ interface NavItem {
         </div>
 
         <button
-          class="absolute -right-4 top-[68px] grid h-8 w-8 place-items-center rounded-full border border-line bg-surface text-secondary shadow-sm transition duration-[var(--baseline-motion-medium)] hover:border-primary hover:text-primary"
+          class="absolute -right-5 top-[66px] z-30 grid h-10 w-10 place-items-center rounded-full border border-line bg-surface text-secondary shadow-md transition duration-[var(--baseline-motion-medium)] hover:border-primary hover:text-primary"
           type="button"
           (click)="toggleCollapsed()"
           [attr.aria-label]="collapsed() ? 'Expandir menu' : 'Contraer menu'"
