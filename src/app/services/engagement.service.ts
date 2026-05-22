@@ -86,7 +86,7 @@ export interface MessagePage {
 })
 export class EngagementService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/api';
+  private apiUrl = '/api';
 
   getAlerts(): Observable<RehabAlert[]> {
     return this.http.get<RehabAlert[]>(`${this.apiUrl}/alerts/`);

@@ -511,7 +511,7 @@ export class MensajeriaComponent implements OnInit, OnDestroy {
 
   private normalizeFileUrl(url: string): string {
     if (url.startsWith('http')) return url;
-    return `http://localhost:8000${url.startsWith('/') ? '' : '/'}${url}`;
+    return `${url.startsWith('/') ? '' : '/'}${url}`;
   }
 
   private isImageUrl(url: string): boolean {

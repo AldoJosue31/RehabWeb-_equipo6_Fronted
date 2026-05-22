@@ -17,7 +17,7 @@ export interface LoginResponse {
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/api/auth/token/';
+  private apiUrl = '/api/auth/token/';
 
   login(username: string, password: string, role: AuthRole): Observable<LoginResponse> {
     return this.http

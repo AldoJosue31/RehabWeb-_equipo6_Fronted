@@ -8,7 +8,7 @@ import { BackendConversation, BackendMessage, BackendVideoCall } from '../models
 })
 export class MensajeriaService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/api/mensajeria';
+  private apiUrl = '/api/mensajeria';
 
   private httpOptions = {
     withCredentials: true
